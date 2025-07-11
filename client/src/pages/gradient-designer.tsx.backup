@@ -1,0 +1,3674 @@
+import { useState, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { GradientButton } from "@/components/gradient-button";
+import { InteractiveButton } from "@/components/interactive-button";
+import { ColorPicker } from "@/components/color-picker";
+import { CompactColorPicker } from "@/components/compact-color-picker";
+import { EyedropperColorPicker } from "@/components/eyedropper-color-picker";
+import { CSSOutput } from "@/components/css-output";
+import { SavedDesigns } from "@/components/saved-designs";
+import { RotateCcw, LogOut, User, Image, Sparkles } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import cssLogo from "@assets/CSS-Logo_1751762652040.png";
+
+interface CustomButton {
+  id: number;
+  name: string;
+  cssCode: string;
+  htmlCode: string;
+  description?: string;
+  createdAt: Date;
+}
+
+const getPreviewBackgroundStyle = (background: string) => {
+  // Check if it's a hex color
+  if (background.startsWith('#')) {
+    return { backgroundColor: background };
+  }
+  
+  // Handle named colors for backward compatibility
+  const colorMap: { [key: string]: string } = {
+    'black': '#000000',
+    'white': '#ffffff',
+    'blue': '#3b82f6',
+    'green': '#10b981',
+    'orange': '#f59e0b',
+    'red': '#ef4444',
+    'gray': '#6b7280',
+    'carbon': '#374151',
+    'linen': '#fef3c7',
+    'metal': '#9ca3af'
+  };
+  
+  return { backgroundColor: colorMap[background] || background || '#9ca3af' };
+};
+
+interface ButtonState {
+  text: string;
+  fontSize: number;
+  fontWeight: number;
+  borderStartColor: string;
+  borderEndColor: string;
+  borderDirection: string;
+  textStartColor: string;
+  textEndColor: string;
+  textDirection: string;
+  backgroundStartColor: string;
+  backgroundEndColor: string;
+  backgroundDirection: string;
+  paddingX: number;
+  paddingY: number;
+  borderRadius: number;
+  borderWidth: number;
+  enable3D: boolean;
+  shadowIntensity: number;
+  width: number;
+  height: number;
+  transparentBackground: boolean;
+  // Text Shadow
+  enableTextShadow: boolean;
+  textShadowColor: string;
+  textShadowX: number;
+  textShadowY: number;
+  textShadowBlur: number;
+  // Box Shadow
+  enableBoxShadow: boolean;
+  boxShadowColor: string;
+  boxShadowX: number;
+  boxShadowY: number;
+  boxShadowBlur: number;
+  boxShadowSpread: number;
+  boxShadowInset: boolean;
+  // Border Style
+  borderStyle: string;
+  // Preview background
+  previewBackground: string;
+  // Advanced CSS Properties
+  enableAdvancedCSS: boolean;
+  customCSS: string;
+  // Hover Effects
+  enableHoverEffects: boolean;
+  hoverScale: number;
+  hoverRotate: number;
+  hoverSkew: number;
+  hoverBrightness: number;
+  // Animation Properties
+  enableAnimation: boolean;
+  animationType: string;
+  animationDuration: number;
+  animationDelay: number;
+  animationIterations: string;
+  // Transform Properties
+  enableTransform: boolean;
+  transformOrigin: string;
+  perspective: number;
+  rotateX: number;
+  rotateY: number;
+  rotateZ: number;
+  // Transition Properties
+  enableTransition: boolean;
+  transitionProperty: string;
+  transitionDuration: number;
+  transitionTimingFunction: string;
+  transitionDelay: number;
+  // Pseudo Elements
+  enableBeforeElement: boolean;
+  beforeContent: string;
+  beforeWidth: number;
+  beforeHeight: number;
+  beforeBackground: string;
+  beforePosition: string;
+  beforeTop: number;
+  beforeLeft: number;
+  enableAfterElement: boolean;
+  afterContent: string;
+  afterWidth: number;
+  afterHeight: number;
+  afterBackground: string;
+  afterPosition: string;
+  afterTop: number;
+  afterLeft: number;
+  // Advanced Effects
+  enableClipPath: boolean;
+  clipPath: string;
+  enableBackdropFilter: boolean;
+  backdropFilter: string;
+  enableMixBlendMode: boolean;
+  mixBlendMode: string;
+  // Custom Properties
+  enableCustomProperties: boolean;
+  customProperties: string;
+}
+
+const initialState: ButtonState = {
+  text: "BOOK FREE MEETING",
+  fontSize: 16,
+  fontWeight: 600,
+  borderStartColor: "#10b981",
+  borderEndColor: "#8b5cf6",
+  borderDirection: "to right",
+  textStartColor: "#10b981",
+  textEndColor: "#8b5cf6",
+  textDirection: "to right",
+  backgroundStartColor: "#ffffff",
+  backgroundEndColor: "#f8fafc",
+  backgroundDirection: "to bottom",
+  paddingX: 24,
+  paddingY: 12,
+  borderRadius: 12,
+  borderWidth: 2,
+  enable3D: false,
+  shadowIntensity: 4,
+  width: 200,
+  height: 50,
+  transparentBackground: false,
+  // Text Shadow
+  enableTextShadow: false,
+  textShadowColor: "#000000",
+  textShadowX: 1,
+  textShadowY: 1,
+  textShadowBlur: 2,
+  // Box Shadow
+  enableBoxShadow: false,
+  boxShadowColor: "#000000",
+  boxShadowX: 2,
+  boxShadowY: 2,
+  boxShadowBlur: 4,
+  boxShadowSpread: 0,
+  boxShadowInset: false,
+  // Border Style
+  borderStyle: "solid",
+  // Preview background
+  previewBackground: "#9ca3af",
+  // Advanced CSS Properties
+  enableAdvancedCSS: false,
+  customCSS: "",
+  // Hover Effects
+  enableHoverEffects: false,
+  hoverScale: 1.05,
+  hoverRotate: 0,
+  hoverSkew: 0,
+  hoverBrightness: 1,
+  // Animation Properties
+  enableAnimation: false,
+  animationType: "none",
+  animationDuration: 0.3,
+  animationDelay: 0,
+  animationIterations: "1",
+  // Transform Properties
+  enableTransform: false,
+  transformOrigin: "center",
+  perspective: 1000,
+  rotateX: 0,
+  rotateY: 0,
+  rotateZ: 0,
+  // Transition Properties
+  enableTransition: true,
+  transitionProperty: "all",
+  transitionDuration: 0.3,
+  transitionTimingFunction: "ease",
+  transitionDelay: 0,
+  // Pseudo Elements
+  enableBeforeElement: false,
+  beforeContent: "",
+  beforeWidth: 100,
+  beforeHeight: 100,
+  beforeBackground: "#ffffff",
+  beforePosition: "absolute",
+  beforeTop: 0,
+  beforeLeft: 0,
+  enableAfterElement: false,
+  afterContent: "",
+  afterWidth: 100,
+  afterHeight: 100,
+  afterBackground: "#ffffff",
+  afterPosition: "absolute",
+  afterTop: 0,
+  afterLeft: 0,
+  // Advanced Effects
+  enableClipPath: false,
+  clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
+  enableBackdropFilter: false,
+  backdropFilter: "blur(10px)",
+  enableMixBlendMode: false,
+  mixBlendMode: "normal",
+  // Custom Properties
+  enableCustomProperties: false,
+  customProperties: "--custom-color: #ff0000;",
+};
+
+const presets = {
+  ocean: { 
+    name: "Ocean Blue",
+    borderStartColor: "#06b6d4", 
+    borderEndColor: "#3b82f6",
+    textStartColor: "#ffffff",
+    textEndColor: "#e0f2fe",
+    backgroundStartColor: "#0ea5e9",
+    backgroundEndColor: "#0284c7",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom"
+  },
+  sunset: { 
+    name: "Sunset",
+    borderStartColor: "#f59e0b", 
+    borderEndColor: "#ef4444",
+    textStartColor: "#ffffff",
+    textEndColor: "#fef3c7",
+    backgroundStartColor: "#f97316",
+    backgroundEndColor: "#ea580c",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 25,
+    paddingX: 24,
+    paddingY: 12,
+    fontWeight: 600
+  },
+  forest: { 
+    name: "Forest",
+    borderStartColor: "#10b981", 
+    borderEndColor: "#059669",
+    textStartColor: "#ffffff",
+    textEndColor: "#d1fae5",
+    backgroundStartColor: "#22c55e",
+    backgroundEndColor: "#16a34a",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 8,
+    paddingX: 28,
+    paddingY: 14,
+    fontWeight: 600
+  },
+  royal: { 
+    name: "Royal",
+    borderStartColor: "#8b5cf6", 
+    borderEndColor: "#6366f1",
+    textStartColor: "#ffffff",
+    textEndColor: "#e0e7ff",
+    backgroundStartColor: "#7c3aed",
+    backgroundEndColor: "#5b21b6",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 30,
+    paddingX: 36,
+    paddingY: 18,
+    fontWeight: 500
+  },
+  gradient: {
+    name: "Rainbow",
+    borderStartColor: "#ff0000",
+    borderEndColor: "#ff8c00",
+    textStartColor: "#ff4500",
+    textEndColor: "#ffd700",
+    backgroundStartColor: "#ff69b4",
+    backgroundEndColor: "#da70d6",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "45deg"
+  },
+  neon: {
+    name: "Neon Glow",
+    borderStartColor: "#00ff00",
+    borderEndColor: "#00ffff",
+    textStartColor: "#ffffff",
+    textEndColor: "#00ff00",
+    backgroundStartColor: "#000000",
+    backgroundEndColor: "#111111",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom"
+  },
+  fire: {
+    name: "Fire 3D",
+    borderStartColor: "#dc2626",
+    borderEndColor: "#991b1b",
+    textStartColor: "#ffffff",
+    textEndColor: "#fecaca",
+    backgroundStartColor: "#ef4444",
+    backgroundEndColor: "#b91c1c",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 20,
+    paddingX: 30,
+    paddingY: 15,
+    fontWeight: 700,
+    enable3D: true,
+    shadowIntensity: 6,
+    enableBoxShadow: true,
+    boxShadowColor: "#991b1b",
+    boxShadowX: 0,
+    boxShadowY: 6,
+    boxShadowBlur: 0,
+    boxShadowSpread: 0
+  },
+  ice: {
+    name: "Ice Glass",
+    borderStartColor: "#0284c7",
+    borderEndColor: "#0369a1",
+    textStartColor: "#ffffff",
+    textEndColor: "#bae6fd",
+    backgroundStartColor: "#0ea5e9",
+    backgroundEndColor: "#0284c7",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 15,
+    paddingX: 26,
+    paddingY: 13,
+    fontWeight: 600,
+    enableBoxShadow: true,
+    boxShadowColor: "#0284c7",
+    boxShadowX: 0,
+    boxShadowY: 0,
+    boxShadowBlur: 15,
+    boxShadowSpread: 0
+  },
+  elegant: {
+    name: "Elegant",
+    borderStartColor: "#8b5cf6",
+    borderEndColor: "#7c3aed",
+    textStartColor: "#ffffff",
+    textEndColor: "#f3e8ff",
+    backgroundStartColor: "#a855f7",
+    backgroundEndColor: "#9333ea",
+    borderDirection: "135deg",
+    textDirection: "135deg",
+    backgroundDirection: "135deg",
+    borderRadius: 40,
+    paddingX: 35,
+    paddingY: 17,
+    fontWeight: 500,
+    enableTextShadow: true,
+    textShadowColor: "#7c3aed",
+    textShadowX: 1,
+    textShadowY: 1,
+    textShadowBlur: 3
+  },
+  minimal: {
+    name: "Minimal",
+    borderStartColor: "#374151",
+    borderEndColor: "#111827",
+    textStartColor: "#ffffff",
+    textEndColor: "#f9fafb",
+    backgroundStartColor: "#4b5563",
+    backgroundEndColor: "#1f2937",
+    borderDirection: "to right",
+    textDirection: "to right",
+    backgroundDirection: "to bottom",
+    borderRadius: 8,
+    paddingX: 24,
+    paddingY: 12,
+    fontWeight: 500,
+    borderWidth: 1,
+    borderStyle: "solid"
+  }
+};
+
+const brickButtonStyles = {
+  purpleBrick: {
+    name: "Purple Brick",
+    borderStartColor: "#4c1d95",
+    borderEndColor: "#312e81",
+    borderDirection: "to bottom",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff",
+    textDirection: "to right",
+    backgroundStartColor: "#8b5cf6",
+    backgroundEndColor: "#7c3aed",
+    backgroundDirection: "to bottom",
+    borderRadius: 25,
+    fontWeight: 700,
+    borderWidth: 0,
+    paddingX: 40,
+    paddingY: 20,
+    enable3D: true,
+    shadowIntensity: 8,
+    enableBoxShadow: true,
+    boxShadowColor: "#312e81",
+    boxShadowX: 0,
+    boxShadowY: 8,
+    boxShadowBlur: 0,
+    boxShadowSpread: 0,
+    fontSize: 16
+  },
+  tealBrick: {
+    name: "Teal Brick",
+    borderStartColor: "#155e75",
+    borderEndColor: "#0e7490",
+    borderDirection: "to bottom",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff",
+    textDirection: "to right",
+    backgroundStartColor: "#06b6d4",
+    backgroundEndColor: "#0891b2",
+    backgroundDirection: "to bottom",
+    borderRadius: 25,
+    fontWeight: 700,
+    borderWidth: 0,
+    paddingX: 40,
+    paddingY: 20,
+    enable3D: true,
+    shadowIntensity: 8,
+    enableBoxShadow: true,
+    boxShadowColor: "#0e7490",
+    boxShadowX: 0,
+    boxShadowY: 8,
+    boxShadowBlur: 0,
+    boxShadowSpread: 0,
+    fontSize: 16
+  },
+  greenBrick: {
+    name: "Green Brick",
+    borderStartColor: "#166534",
+    borderEndColor: "#15803d",
+    borderDirection: "to bottom",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff",
+    textDirection: "to right",
+    backgroundStartColor: "#22c55e",
+    backgroundEndColor: "#16a34a",
+    backgroundDirection: "to bottom",
+    borderRadius: 25,
+    fontWeight: 700,
+    borderWidth: 0,
+    paddingX: 40,
+    paddingY: 20,
+    enable3D: true,
+    shadowIntensity: 8,
+    enableBoxShadow: true,
+    boxShadowColor: "#15803d",
+    boxShadowX: 0,
+    boxShadowY: 8,
+    boxShadowBlur: 0,
+    boxShadowSpread: 0,
+    fontSize: 16
+  },
+  redBrick: {
+    name: "Red Brick",
+    borderStartColor: "#991b1b",
+    borderEndColor: "#b91c1c",
+    borderDirection: "to bottom",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff", 
+    textDirection: "to right",
+    backgroundStartColor: "#ef4444",
+    backgroundEndColor: "#dc2626",
+    backgroundDirection: "to bottom",
+    borderRadius: 25,
+    fontWeight: 700,
+    borderWidth: 0,
+    paddingX: 40,
+    paddingY: 20,
+    enable3D: true,
+    shadowIntensity: 8,
+    enableBoxShadow: true,
+    boxShadowColor: "#b91c1c",
+    boxShadowX: 0,
+    boxShadowY: 8,
+    boxShadowBlur: 0,
+    boxShadowSpread: 0,
+    fontSize: 16
+  }
+};
+
+const modernButtonStyles = {
+  basic: {
+    name: "Basic Modern",
+    borderStartColor: "#000000",
+    borderEndColor: "#000000", 
+    borderDirection: "to right",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff",
+    textDirection: "to right", 
+    backgroundStartColor: "#000000",
+    backgroundEndColor: "#000000",
+    backgroundDirection: "to right",
+    borderRadius: 50,
+    fontWeight: 900,
+    borderWidth: 2,
+    paddingX: 48,
+    paddingY: 13
+  },
+  neonGlow: {
+    name: "Neon Glow",
+    borderStartColor: "#0ea5e9",
+    borderEndColor: "#0ea5e9",
+    borderDirection: "to right", 
+    textStartColor: "#ffffff",
+    textEndColor: "#ffffff",
+    textDirection: "to right",
+    backgroundStartColor: "#000000", 
+    backgroundEndColor: "#000000",
+    backgroundDirection: "to right",
+    enableBoxShadow: true,
+    boxShadowColor: "#0ea5e9",
+    boxShadowX: 0,
+    boxShadowY: 0,
+    boxShadowBlur: 25,
+    boxShadowSpread: 0,
+    borderWidth: 4,
+    fontWeight: 900,
+    paddingX: 48,
+    paddingY: 20
+  },
+  slideRight: {
+    name: "Slide Right",
+    borderStartColor: "#000000",
+    borderEndColor: "#000000",
+    borderDirection: "to right",
+    textStartColor: "#ffffff", 
+    textEndColor: "#ffffff",
+    textDirection: "to right",
+    backgroundStartColor: "#000000",
+    backgroundEndColor: "#ffffff",
+    backgroundDirection: "to right",
+    borderRadius: 50,
+    fontWeight: 900,
+    borderWidth: 2,
+    paddingX: 48,
+    paddingY: 13
+  },
+  glitch: {
+    name: "Glitch Effect",
+    borderStartColor: "#ff0080",
+    borderEndColor: "#00ff80",
+    borderDirection: "45deg",
+    textStartColor: "#ffffff",
+    textEndColor: "#00ffff", 
+    textDirection: "45deg",
+    backgroundStartColor: "#000000",
+    backgroundEndColor: "#1a1a1a",
+    backgroundDirection: "45deg",
+    enableTextShadow: true,
+    textShadowColor: "#ff0080",
+    textShadowX: 2,
+    textShadowY: 2,
+    textShadowBlur: 0,
+    fontWeight: 900,
+    borderWidth: 2
+  },
+  minimal: {
+    name: "Minimal Clean",
+    borderStartColor: "#e5e7eb",
+    borderEndColor: "#e5e7eb",
+    borderDirection: "to right",
+    textStartColor: "#374151",
+    textEndColor: "#374151", 
+    textDirection: "to right",
+    backgroundStartColor: "#ffffff",
+    backgroundEndColor: "#f9fafb",
+    backgroundDirection: "to bottom",
+    borderRadius: 8,
+    borderWidth: 1,
+    fontWeight: 500,
+    paddingX: 24,
+    paddingY: 12
+  },
+  retrowave: {
+    name: "Retro Wave",
+    borderStartColor: "#ff00ff",
+    borderEndColor: "#00ffff",
+    borderDirection: "45deg",
+    textStartColor: "#ffffff",
+    textEndColor: "#ffff00",
+    textDirection: "90deg",
+    backgroundStartColor: "#4c1d95",
+    backgroundEndColor: "#831843", 
+    backgroundDirection: "135deg",
+    enableBoxShadow: true,
+    boxShadowColor: "#ff00ff",
+    boxShadowX: 0,
+    boxShadowY: 4,
+    boxShadowBlur: 15,
+    fontWeight: 800,
+    borderWidth: 2
+  }
+};
+
+export default function GradientDesigner() {
+  const [state, setState] = useState<ButtonState>(initialState);
+  const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+
+  // Fetch custom buttons from admin
+  const { data: customButtons = [] } = useQuery<CustomButton[]>({
+    queryKey: ['/api/custom-buttons'],
+  });
+
+  const updateState = useCallback((updates: Partial<ButtonState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const resetState = useCallback(() => {
+    setState(initialState);
+  }, []);
+
+  const loadDesign = useCallback((design: Partial<ButtonState>) => {
+    setState(prev => ({ ...prev, ...design }));
+  }, []);
+
+  const applyPreset = useCallback((presetName: keyof typeof presets) => {
+    const preset = presets[presetName];
+    updateState(preset);
+  }, [updateState]);
+
+
+
+  const applyBrickStyle = useCallback((styleName: keyof typeof brickButtonStyles) => {
+    const style = brickButtonStyles[styleName];
+    updateState(style);
+  }, [updateState]);
+
+  const generateCSS = useCallback(() => {
+    const borderGradient = `linear-gradient(${state.borderDirection}, ${state.borderStartColor}, ${state.borderEndColor})`;
+    const textGradient = `linear-gradient(${state.textDirection}, ${state.textStartColor}, ${state.textEndColor})`;
+    const backgroundGradient = state.transparentBackground 
+      ? 'transparent' 
+      : `linear-gradient(${state.backgroundDirection}, ${state.backgroundStartColor}, ${state.backgroundEndColor})`;
+    
+    const textShadow = state.enableTextShadow 
+      ? `text-shadow: ${state.textShadowX}px ${state.textShadowY}px ${state.textShadowBlur}px ${state.textShadowColor};`
+      : '';
+    
+    const boxShadow = state.enableBoxShadow 
+      ? `box-shadow: ${state.boxShadowInset ? 'inset ' : ''}${state.boxShadowX}px ${state.boxShadowY}px ${state.boxShadowBlur}px ${state.boxShadowSpread}px ${state.boxShadowColor};`
+      : '';
+    
+    const border3D = state.enable3D && !state.enableBoxShadow
+      ? `box-shadow: 0 ${state.shadowIntensity}px ${state.shadowIntensity * 2}px rgba(0, 0, 0, 0.2), 0 ${state.shadowIntensity * 2}px ${state.shadowIntensity * 4}px rgba(0, 0, 0, 0.15);`
+      : '';
+
+    // Build transforms
+    const transforms = [];
+    if (state.enableTransform) {
+      if (state.rotateX !== 0) transforms.push(`rotateX(${state.rotateX}deg)`);
+      if (state.rotateY !== 0) transforms.push(`rotateY(${state.rotateY}deg)`);
+      if (state.rotateZ !== 0) transforms.push(`rotateZ(${state.rotateZ}deg)`);
+      if (state.perspective !== 1000) transforms.push(`perspective(${state.perspective}px)`);
+    }
+    const transformString = transforms.length > 0 ? `transform: ${transforms.join(' ')};` : '';
+
+    // Build hover transforms
+    const hoverTransforms = [];
+    if (state.enableHoverEffects) {
+      if (state.hoverScale !== 1) hoverTransforms.push(`scale(${state.hoverScale})`);
+      if (state.hoverRotate !== 0) hoverTransforms.push(`rotate(${state.hoverRotate}deg)`);
+      if (state.hoverSkew !== 0) hoverTransforms.push(`skew(${state.hoverSkew}deg)`);
+    }
+    const hoverTransformString = hoverTransforms.length > 0 ? `transform: ${hoverTransforms.join(' ')};` : '';
+
+    // Build animation keyframes
+    const animationKeyframes = state.enableAnimation && state.animationType !== 'none' ? `
+@keyframes ${state.animationType} {
+  ${state.animationType === 'pulse' ? `
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+  ` : ''}
+  ${state.animationType === 'bounce' ? `
+    0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+    40%, 43% { transform: translateY(-10px); }
+    70% { transform: translateY(-5px); }
+    90% { transform: translateY(-2px); }
+  ` : ''}
+  ${state.animationType === 'wobble' ? `
+    0% { transform: translateX(0%); }
+    15% { transform: translateX(-25%) rotate(-5deg); }
+    30% { transform: translateX(20%) rotate(3deg); }
+    45% { transform: translateX(-15%) rotate(-3deg); }
+    60% { transform: translateX(10%) rotate(2deg); }
+    75% { transform: translateX(-5%) rotate(-1deg); }
+    100% { transform: translateX(0%); }
+  ` : ''}
+  ${state.animationType === 'fadeIn' ? `
+    from { opacity: 0; }
+    to { opacity: 1; }
+  ` : ''}
+  ${state.animationType === 'slideIn' ? `
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  ` : ''}
+  ${state.animationType === 'rotate' ? `
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  ` : ''}
+}` : '';
+
+    const animationValue = state.enableAnimation && state.animationType !== 'none'
+      ? `animation: ${state.animationType} ${state.animationDuration}s ${state.transitionTimingFunction} ${state.animationDelay}s ${state.animationIterations};`
+      : '';
+
+    // Clean CSS generation with proper formatting
+    let css = '';
+    
+    // Add keyframes if animation is enabled
+    if (state.enableAnimation && state.animationType !== 'none') {
+      css += animationKeyframes + '\n\n';
+    }
+    
+    // Add custom properties if enabled
+    if (state.enableCustomProperties && state.customProperties) {
+      css += state.customProperties + '\n\n';
+    }
+    
+    // Main button styles
+    css += `.gradient-button {
+  display: inline-block;
+  border-radius: ${state.borderRadius}px;
+  background: ${borderGradient};
+  padding: ${state.borderWidth}px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: ${state.width}px;
+  height: ${state.height}px;
+  border: ${state.borderWidth}px ${state.borderStyle} transparent;`;
+
+    // Add 3D effects
+    if (state.enable3D) {
+      css += `\n  transform: perspective(1000px) rotateX(5deg);`;
+    }
+    
+    // Add transforms
+    if (transformString) {
+      css += `\n  ${transformString}`;
+    }
+    
+    // Add transitions
+    if (state.enableTransition) {
+      css += `\n  transition: ${state.transitionProperty} ${state.transitionDuration}s ${state.transitionTimingFunction} ${state.transitionDelay}s;`;
+    }
+    
+    // Add animations
+    if (animationValue) {
+      css += `\n  ${animationValue}`;
+    }
+    
+    // Add advanced effects
+    if (state.enableClipPath) {
+      css += `\n  clip-path: ${state.clipPath};`;
+    }
+    if (state.enableBackdropFilter) {
+      css += `\n  backdrop-filter: ${state.backdropFilter};`;
+    }
+    if (state.enableMixBlendMode) {
+      css += `\n  mix-blend-mode: ${state.mixBlendMode};`;
+    }
+    
+    // Add box shadow or 3D shadow
+    if (boxShadow) {
+      css += `\n  ${boxShadow}`;
+    } else if (border3D) {
+      css += `\n  ${border3D}`;
+    }
+    
+    // Add custom CSS
+    if (state.enableAdvancedCSS && state.customCSS) {
+      css += `\n  ${state.customCSS}`;
+    }
+    
+    css += `\n}`;
+
+    // Inner button styles
+    css += `\n\n.gradient-button .button-inner {
+  background: ${backgroundGradient};
+  border-radius: ${Math.max(0, state.borderRadius - state.borderWidth)}px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}`;
+
+    // Text styles
+    css += `\n\n.gradient-button .button-text {
+  font-size: ${state.fontSize}px;
+  font-weight: ${state.fontWeight};
+  background-image: ${textGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  margin: 0;
+  padding: 0;
+  display: inline;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;`;
+    
+    if (textShadow) {
+      css += `\n  ${textShadow}`;
+    }
+    css += `\n}`;
+
+    // Add pseudo elements
+    if (state.enableBeforeElement) {
+      css += `\n\n.gradient-button::before {
+  content: "${state.beforeContent}";
+  position: ${state.beforePosition};
+  top: ${state.beforeTop}px;
+  left: ${state.beforeLeft}px;
+  width: ${state.beforeWidth}%;
+  height: ${state.beforeHeight}%;
+  background: ${state.beforeBackground};
+  z-index: -1;
+  transition: inherit;
+}`;
+    }
+    
+    if (state.enableAfterElement) {
+      css += `\n\n.gradient-button::after {
+  content: "${state.afterContent}";
+  position: ${state.afterPosition};
+  top: ${state.afterTop}px;
+  left: ${state.afterLeft}px;
+  width: ${state.afterWidth}%;
+  height: ${state.afterHeight}%;
+  background: ${state.afterBackground};
+  z-index: -1;
+  transition: inherit;
+}`;
+    }
+
+    // Hover effects
+    css += `\n\n.gradient-button:hover {
+  transform: ${state.enable3D ? 'perspective(1000px) rotateX(5deg) scale(1.05)' : 'scale(1.05)'};`;
+    
+    if (hoverTransformString) {
+      css += `\n  ${hoverTransformString}`;
+    }
+    if (state.enableHoverEffects) {
+      css += `\n  filter: brightness(${state.hoverBrightness});`;
+    }
+    css += `\n}`;
+
+    return css;
+  }, [state]);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50 px-6 py-4 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-lg">CB</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+                CSS Button Maker
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">Create beautiful CSS buttons with live preview and code generation</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600 mr-4">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>Live Preview</span>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/gallery'}
+              className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+            >
+              <Image className="w-4 h-4" />
+              <span>Gallery</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={resetState}
+              className="flex items-center space-x-2 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset</span>
+            </Button>
+            {isAuthenticated ? (
+              <Button
+                variant="ghost"
+                onClick={() => window.location.href = '/api/logout'}
+                className="flex items-center space-x-2 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={() => window.location.href = '/api/login'}
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <User className="w-4 h-4" />
+                <span>Login</span>
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex">
+        {/* Left Panel - Template Buttons */}
+        <div className="w-[30%] bg-white/70 backdrop-blur-sm border-r border-gray-200/50 p-6 overflow-y-auto">
+          <div className="w-[90%] mx-auto space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-blue-800 bg-clip-text text-transparent">
+                Button Styles
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Choose a template to get started</p>
+            </div>
+            
+            {/* Quick Presets */}
+            <div className="space-y-3">
+              <h4 className="text-md font-medium text-gray-700 flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                Quick Presets
+              </h4>
+              <div className="grid grid-cols-1 gap-3">
+                {Object.entries(presets).map(([key, preset]) => (
+                  <button
+                    key={key}
+                    onClick={() => applyPreset(key as keyof typeof presets)}
+                    className="group w-full p-3 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-xl border border-gray-200 hover:border-blue-300 transition-all duration-300 shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-800">
+                        {preset.name}
+                      </span>
+                      <div 
+                        className="w-6 h-6 rounded-lg shadow-sm border border-gray-200"
+                        style={{ 
+                          background: `linear-gradient(${preset.backgroundDirection}, ${preset.backgroundStartColor}, ${preset.backgroundEndColor})`
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-center">
+                      <div 
+                        className="px-3 py-1.5 text-xs font-medium text-white rounded-lg shadow-sm"
+                        style={{ 
+                          background: `linear-gradient(${preset.backgroundDirection}, ${preset.backgroundStartColor}, ${preset.backgroundEndColor})`,
+                          borderRadius: `${(preset as any).borderRadius || 8}px`,
+                          transform: (preset as any).enable3D ? 'perspective(100px) rotateX(5deg)' : 'none'
+                        }}
+                      >
+                        Preview
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* New Buttons from Admin */}
+            {customButtons.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-md font-medium text-gray-700 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  New Buttons
+                </h4>
+                <div className="space-y-2">
+                  {customButtons.map((button) => (
+                    <div key={button.id} className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <div className="mb-2">
+                        <h5 className="text-sm font-medium text-gray-700">{button.name}</h5>
+                        {button.description && (
+                          <p className="text-xs text-gray-500 mt-1">{button.description}</p>
+                        )}
+                      </div>
+                      <div 
+                        className="flex items-center justify-center p-4 bg-white rounded border"
+                        dangerouslySetInnerHTML={{
+                          __html: `
+                            <style>
+                              .custom-btn-preview-${button.id} {
+                                all: initial;
+                                font-family: inherit;
+                              }
+                              ${button.cssCode.replace(/\.[\w-]+/g, `.custom-btn-preview-${button.id}`)}
+                            </style>
+                            <button class="custom-btn-preview-${button.id}">${button.name.replace(' Button', '')}</button>
+                          `
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          // Parse CSS and apply to gradient designer
+                          const buttonText = button.name.replace(' Button', '');
+                          const css = button.cssCode;
+                          
+                          // Extract CSS properties
+                          const parseCSS = (cssText: string) => {
+                            const properties: any = {};
+                            
+                            // Extract background
+                            const backgroundMatch = cssText.match(/background\s*:\s*linear-gradient\(([^)]+)\)/);
+                            if (backgroundMatch) {
+                              const gradientParts = backgroundMatch[1].split(',').map(s => s.trim());
+                              if (gradientParts.length >= 3) {
+                                const direction = gradientParts[0].replace('to ', '').replace('bottom', '180deg').replace('top', '0deg').replace('right', '90deg').replace('left', '270deg');
+                                properties.backgroundDirection = direction;
+                                properties.backgroundStartColor = gradientParts[1].split(' ')[0];
+                                properties.backgroundEndColor = gradientParts[2].split(' ')[0];
+                              }
+                            }
+                            
+                            // Extract solid background color
+                            const bgColorMatch = cssText.match(/background-color\s*:\s*([^;]+)/);
+                            if (bgColorMatch && !backgroundMatch) {
+                              properties.backgroundStartColor = bgColorMatch[1].trim();
+                              properties.backgroundEndColor = bgColorMatch[1].trim();
+                            }
+                            
+                            // Extract text color
+                            const colorMatch = cssText.match(/color\s*:\s*([^;]+)/);
+                            if (colorMatch) {
+                              properties.textStartColor = colorMatch[1].trim();
+                              properties.textEndColor = colorMatch[1].trim();
+                            }
+                            
+                            // Extract border radius
+                            const borderRadiusMatch = cssText.match(/border-radius\s*:\s*([^;]+)/);
+                            if (borderRadiusMatch) {
+                              properties.borderRadius = parseInt(borderRadiusMatch[1]) || 8;
+                            }
+                            
+                            // Extract padding
+                            const paddingMatch = cssText.match(/padding\s*:\s*([^;]+)/);
+                            if (paddingMatch) {
+                              const padding = paddingMatch[1].trim().split(' ');
+                              if (padding.length >= 2) {
+                                properties.paddingY = parseInt(padding[0]) || 12;
+                                properties.paddingX = parseInt(padding[1]) || 24;
+                              }
+                            }
+                            
+                            // Extract border
+                            const borderMatch = cssText.match(/border\s*:\s*([^;]+)/);
+                            if (borderMatch) {
+                              const borderParts = borderMatch[1].split(' ');
+                              if (borderParts.length >= 3) {
+                                properties.borderWidth = parseInt(borderParts[0]) || 0;
+                                properties.borderStyle = borderParts[1] || 'solid';
+                                properties.borderStartColor = borderParts[2] || '#000000';
+                                properties.borderEndColor = borderParts[2] || '#000000';
+                              }
+                            }
+                            
+                            // Extract box shadow
+                            const boxShadowMatch = cssText.match(/box-shadow\s*:\s*([^;]+)/);
+                            if (boxShadowMatch) {
+                              const shadowParts = boxShadowMatch[1].split(' ');
+                              if (shadowParts.length >= 4) {
+                                properties.enableBoxShadow = true;
+                                properties.boxShadowX = parseInt(shadowParts[0]) || 0;
+                                properties.boxShadowY = parseInt(shadowParts[1]) || 0;
+                                properties.boxShadowBlur = parseInt(shadowParts[2]) || 0;
+                                properties.boxShadowSpread = parseInt(shadowParts[3]) || 0;
+                                properties.boxShadowColor = shadowParts[4] || 'rgba(0,0,0,0.25)';
+                              }
+                            }
+                            
+                            // Extract text shadow
+                            const textShadowMatch = cssText.match(/text-shadow\s*:\s*([^;]+)/);
+                            if (textShadowMatch) {
+                              const shadowParts = textShadowMatch[1].split(' ');
+                              if (shadowParts.length >= 4) {
+                                properties.enableTextShadow = true;
+                                properties.textShadowX = parseInt(shadowParts[0]) || 0;
+                                properties.textShadowY = parseInt(shadowParts[1]) || 0;
+                                properties.textShadowBlur = parseInt(shadowParts[2]) || 0;
+                                properties.textShadowColor = shadowParts[3] || '#000000';
+                              }
+                            }
+                            
+                            // Extract font size
+                            const fontSizeMatch = cssText.match(/font-size\s*:\s*([^;]+)/);
+                            if (fontSizeMatch) {
+                              properties.fontSize = parseInt(fontSizeMatch[1]) || 16;
+                            }
+                            
+                            // Extract font weight
+                            const fontWeightMatch = cssText.match(/font-weight\s*:\s*([^;]+)/);
+                            if (fontWeightMatch) {
+                              properties.fontWeight = parseInt(fontWeightMatch[1]) || 400;
+                            }
+                            
+                            // Extract border width and border radius from separate properties
+                            const borderWidthMatch = cssText.match(/border-width\s*:\s*([^;]+)/);
+                            if (borderWidthMatch) {
+                              properties.borderWidth = parseInt(borderWidthMatch[1]) || 0;
+                            }
+                            
+                            // Handle percentage-based padding
+                            const paddingXMatch = cssText.match(/padding\s*:\s*[^;]*?(\d+(?:\.\d+)?)(rem|px|em)/);
+                            if (paddingXMatch) {
+                              const value = parseFloat(paddingXMatch[1]);
+                              const unit = paddingXMatch[2];
+                              // Convert rem to px (approximate)
+                              if (unit === 'rem') {
+                                properties.paddingY = Math.round(value * 16 * 0.8); // 0.8rem
+                                properties.paddingX = Math.round(value * 16 * 3); // 3rem
+                              } else {
+                                properties.paddingY = Math.round(value * 0.8);
+                                properties.paddingX = Math.round(value * 3);
+                              }
+                            }
+                            
+                            return properties;
+                          };
+                          
+                          const parsedProps = parseCSS(css);
+                          
+                          setState(prev => ({
+                            ...prev,
+                            text: buttonText,
+                            ...parsedProps
+                          }));
+                          
+                          toast({
+                            title: "Custom Button Style Applied",
+                            description: `Applied ${button.name} properties to the gradient designer. Customize further using the controls!`,
+                          });
+                        }}
+                        className="w-full mt-2 px-3 py-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                      >
+                        Apply Style
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* 3D Brick Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">3D Brick</h4>
+              <div className="space-y-2">
+                {Object.entries(brickButtonStyles).map(([key, style]) => (
+                  <button
+                    key={key}
+                    onClick={() => applyBrickStyle(key as keyof typeof brickButtonStyles)}
+                    className="w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <div 
+                      className="px-4 py-2 text-sm font-medium text-white rounded-lg shadow-lg"
+                      style={{ 
+                        background: `linear-gradient(${style.backgroundDirection}, ${style.backgroundStartColor}, ${style.backgroundEndColor})`,
+                        boxShadow: `0 4px 0 ${style.boxShadowColor}`
+                      }}
+                    >
+                      {style.name}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+
+
+            {/* 3D Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">3D Effects</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    enable3D: true,
+                    shadowIntensity: 70,
+                    boxShadowX: 0,
+                    boxShadowY: 6,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#45a049",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#4CAF50",
+                    backgroundEndColor: "#4CAF50",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#4CAF50",
+                    borderEndColor: "#4CAF50"
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors shadow-lg"
+                >
+                  Green 3D Press
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    enable3D: true,
+                    shadowIntensity: 70,
+                    boxShadowX: 0,
+                    boxShadowY: 6,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#1976D2",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#2196F3",
+                    backgroundEndColor: "#2196F3",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#2196F3",
+                    borderEndColor: "#2196F3"
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-lg"
+                >
+                  Blue 3D Press
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    enable3D: true,
+                    shadowIntensity: 70,
+                    boxShadowX: 0,
+                    boxShadowY: 6,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#F57C00",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#FF9800",
+                    backgroundEndColor: "#FF9800",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#FF9800",
+                    borderEndColor: "#FF9800"
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors shadow-lg"
+                >
+                  Orange 3D Press
+                </button>
+              </div>
+            </div>
+
+            {/* Gradient Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Gradient</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#667eea",
+                    backgroundEndColor: "#764ba2",
+                    backgroundDirection: "135deg",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#667eea",
+                    borderEndColor: "#764ba2"
+                  })}
+                  className="w-full p-2 text-left rounded-lg text-white transition-colors"
+                  style={{background: "linear-gradient(135deg, #667eea, #764ba2)"}}
+                >
+                  Purple Gradient
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#f093fb",
+                    backgroundEndColor: "#f5576c",
+                    backgroundDirection: "135deg",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#f093fb",
+                    borderEndColor: "#f5576c"
+                  })}
+                  className="w-full p-2 text-left rounded-lg text-white transition-colors"
+                  style={{background: "linear-gradient(135deg, #f093fb, #f5576c)"}}
+                >
+                  Pink Gradient
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#4facfe",
+                    backgroundEndColor: "#00f2fe",
+                    backgroundDirection: "135deg",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#4facfe",
+                    borderEndColor: "#00f2fe"
+                  })}
+                  className="w-full p-2 text-left rounded-lg text-white transition-colors"
+                  style={{background: "linear-gradient(135deg, #4facfe, #00f2fe)"}}
+                >
+                  Blue Gradient
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#fa709a",
+                    backgroundEndColor: "#fee140",
+                    backgroundDirection: "135deg",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#fa709a",
+                    borderEndColor: "#fee140"
+                  })}
+                  className="w-full p-2 text-left rounded-lg text-white transition-colors"
+                  style={{background: "linear-gradient(135deg, #fa709a, #fee140)"}}
+                >
+                  Sunset Gradient
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#a8edea",
+                    backgroundEndColor: "#fed6e3",
+                    backgroundDirection: "135deg",
+                    textStartColor: "#333333",
+                    textEndColor: "#333333",
+                    borderStartColor: "#a8edea",
+                    borderEndColor: "#fed6e3"
+                  })}
+                  className="w-full p-2 text-left rounded-lg text-gray-800 transition-colors"
+                  style={{background: "linear-gradient(135deg, #a8edea, #fed6e3)"}}
+                >
+                  Soft Gradient
+                </button>
+              </div>
+            </div>
+
+            {/* Shadow Border Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Shadow Border</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#e0e0e0",
+                    borderEndColor: "#e0e0e0",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 2,
+                    boxShadowBlur: 8,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(0,0,0,0.1)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ffffff",
+                    backgroundEndColor: "#ffffff",
+                    textStartColor: "#333333",
+                    textEndColor: "#333333",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-white text-gray-800 border border-gray-300 hover:shadow-md transition-shadow"
+                >
+                  White Shadow
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 4,
+                    boxShadowBlur: 12,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(59,130,246,0.3)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ffffff",
+                    backgroundEndColor: "#ffffff",
+                    textStartColor: "#3b82f6",
+                    textEndColor: "#3b82f6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-white text-blue-500 border-2 border-blue-500 hover:shadow-md transition-shadow"
+                >
+                  Blue Border Shadow
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 4,
+                    boxShadowBlur: 12,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(16,185,129,0.3)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ffffff",
+                    backgroundEndColor: "#ffffff",
+                    textStartColor: "#10b981",
+                    textEndColor: "#10b981",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-white text-green-500 border-2 border-green-500 hover:shadow-md transition-shadow"
+                >
+                  Green Border Shadow
+                </button>
+              </div>
+            </div>
+
+            {/* Neumorphic Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Neumorphic</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 25,
+                    paddingY: 15,
+                    boxShadowX: 9,
+                    boxShadowY: 9,
+                    boxShadowBlur: 16,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#a3b1c6",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#e0e5ec",
+                    backgroundEndColor: "#e0e5ec",
+                    textStartColor: "#9baacf",
+                    textEndColor: "#9baacf",
+                    borderStartColor: "#e0e5ec",
+                    borderEndColor: "#e0e5ec",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-gray-200 text-gray-600 shadow-inner transition-all"
+                >
+                  Soft Neumorphic
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 15,
+                    paddingX: 25,
+                    paddingY: 15,
+                    boxShadowX: 5,
+                    boxShadowY: 5,
+                    boxShadowBlur: 10,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#c8d0e7",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#e0e5ec",
+                    backgroundEndColor: "#e0e5ec",
+                    textStartColor: "#9baacf",
+                    textEndColor: "#9baacf",
+                    borderStartColor: "#e0e5ec",
+                    borderEndColor: "#e0e5ec",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-xl bg-gray-200 text-gray-600 shadow-inner transition-all"
+                >
+                  Rounded Neumorphic
+                </button>
+              </div>
+            </div>
+
+            {/* Retro Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Retro</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 3,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#000000",
+                    borderEndColor: "#000000",
+                    borderStyle: "solid",
+                    boxShadowX: 5,
+                    boxShadowY: 5,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#000000",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ff6b6b",
+                    backgroundEndColor: "#ff6b6b",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-red-500 text-white border-2 border-black shadow-lg transition-all"
+                  style={{boxShadow: "5px 5px 0px #000000"}}
+                >
+                  Red Retro
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 3,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#000000",
+                    borderEndColor: "#000000",
+                    borderStyle: "solid",
+                    boxShadowX: 5,
+                    boxShadowY: 5,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#000000",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#4ecdc4",
+                    backgroundEndColor: "#4ecdc4",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-teal-500 text-white border-2 border-black shadow-lg transition-all"
+                  style={{boxShadow: "5px 5px 0px #000000"}}
+                >
+                  Teal Retro
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 3,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#000000",
+                    borderEndColor: "#000000",
+                    borderStyle: "solid",
+                    boxShadowX: 7,
+                    boxShadowY: 7,
+                    boxShadowBlur: 0,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#000000",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ffd93d",
+                    backgroundEndColor: "#ffd93d",
+                    textStartColor: "#000000",
+                    textEndColor: "#000000",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-yellow-400 text-black border-2 border-black shadow-lg transition-all"
+                  style={{boxShadow: "7px 7px 0px #000000"}}
+                >
+                  Yellow Retro
+                </button>
+              </div>
+            </div>
+
+            {/* Sliding Effect Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Sliding Effects</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#3b82f6",
+                    textEndColor: "#3b82f6",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-blue-500 border-2 border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-300"
+                >
+                  Slide Fill Blue
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#10b981",
+                    textEndColor: "#10b981",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-green-500 border-2 border-green-500 hover:bg-green-500 hover:text-white transition-all duration-300"
+                >
+                  Slide Fill Green
+                </button>
+              </div>
+            </div>
+
+            {/* Rounded Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Rounded</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 25,
+                    paddingX: 25,
+                    paddingY: 12,
+                    backgroundStartColor: "#007bff",
+                    backgroundEndColor: "#007bff",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#007bff",
+                    borderEndColor: "#007bff",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Blue Rounded
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 30,
+                    paddingY: 15,
+                    backgroundStartColor: "#28a745",
+                    backgroundEndColor: "#28a745",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#28a745",
+                    borderEndColor: "#28a745",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors"
+                >
+                  Green Pill
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 30,
+                    paddingY: 15,
+                    backgroundStartColor: "#dc3545",
+                    backgroundEndColor: "#dc3545",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#dc3545",
+                    borderEndColor: "#dc3545",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  Red Pill
+                </button>
+              </div>
+            </div>
+
+            {/* Neon Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Neon</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#00ff00",
+                    borderEndColor: "#00ff00",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 0,
+                    boxShadowBlur: 15,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#00ff00",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#1a1a1a",
+                    backgroundEndColor: "#1a1a1a",
+                    textStartColor: "#00ff00",
+                    textEndColor: "#00ff00",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-gray-900 text-green-400 border-2 border-green-400 transition-all"
+                  style={{boxShadow: "0 0 15px #00ff00"}}
+                >
+                  Green Neon
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#ff0080",
+                    borderEndColor: "#ff0080",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 0,
+                    boxShadowBlur: 15,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#ff0080",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#1a1a1a",
+                    backgroundEndColor: "#1a1a1a",
+                    textStartColor: "#ff0080",
+                    textEndColor: "#ff0080",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-gray-900 text-pink-400 border-2 border-pink-400 transition-all"
+                  style={{boxShadow: "0 0 15px #ff0080"}}
+                >
+                  Pink Neon
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#00ffff",
+                    borderEndColor: "#00ffff",
+                    borderStyle: "solid",
+                    boxShadowX: 0,
+                    boxShadowY: 0,
+                    boxShadowBlur: 15,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "#00ffff",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#1a1a1a",
+                    backgroundEndColor: "#1a1a1a",
+                    textStartColor: "#00ffff",
+                    textEndColor: "#00ffff",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-gray-900 text-cyan-400 border-2 border-cyan-400 transition-all"
+                  style={{boxShadow: "0 0 15px #00ffff"}}
+                >
+                  Cyan Neon
+                </button>
+              </div>
+            </div>
+
+            {/* Shadow on Click */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">With Shadow on Click</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    boxShadowX: 0,
+                    boxShadowY: 8,
+                    boxShadowBlur: 16,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(59,130,246,0.4)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#3b82f6",
+                    backgroundEndColor: "#3b82f6",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-blue-500 text-white hover:shadow-xl active:shadow-sm transition-shadow"
+                >
+                  Blue Click Shadow
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    boxShadowX: 0,
+                    boxShadowY: 8,
+                    boxShadowBlur: 16,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(16,185,129,0.4)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#10b981",
+                    backgroundEndColor: "#10b981",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-green-500 text-white hover:shadow-xl active:shadow-sm transition-shadow"
+                >
+                  Green Click Shadow
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    boxShadowX: 0,
+                    boxShadowY: 8,
+                    boxShadowBlur: 16,
+                    boxShadowSpread: 0,
+                    boxShadowColor: "rgba(239,68,68,0.4)",
+                    enableBoxShadow: true,
+                    backgroundStartColor: "#ef4444",
+                    backgroundEndColor: "#ef4444",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#ef4444",
+                    borderEndColor: "#ef4444",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-red-500 text-white hover:shadow-xl active:shadow-sm transition-shadow"
+                >
+                  Red Click Shadow
+                </button>
+              </div>
+            </div>
+
+            {/* Sliding Effect (Left to Right) */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Sliding Effect (Left to Right)</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#3b82f6",
+                    textEndColor: "#3b82f6",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-blue-500 border-2 border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-300"
+                >
+                  Blue Slide L→R
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#10b981",
+                    textEndColor: "#10b981",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-green-500 border-2 border-green-500 hover:bg-green-500 hover:text-white transition-all duration-300"
+                >
+                  Green Slide L→R
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#f59e0b",
+                    borderEndColor: "#f59e0b",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#f59e0b",
+                    textEndColor: "#f59e0b",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-yellow-500 border-2 border-yellow-500 hover:bg-yellow-500 hover:text-white transition-all duration-300"
+                >
+                  Yellow Slide L→R
+                </button>
+              </div>
+            </div>
+
+            {/* Sliding Effect (Right to Left) */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Sliding Effect (Right to Left)</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#8b5cf6",
+                    borderEndColor: "#8b5cf6",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#8b5cf6",
+                    textEndColor: "#8b5cf6",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-purple-500 border-2 border-purple-500 hover:bg-purple-500 hover:text-white transition-all duration-300"
+                >
+                  Purple Slide R→L
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#ec4899",
+                    borderEndColor: "#ec4899",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#ec4899",
+                    textEndColor: "#ec4899",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-pink-500 border-2 border-pink-500 hover:bg-pink-500 hover:text-white transition-all duration-300"
+                >
+                  Pink Slide R→L
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#06b6d4",
+                    borderEndColor: "#06b6d4",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#06b6d4",
+                    textEndColor: "#06b6d4",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-cyan-500 border-2 border-cyan-500 hover:bg-cyan-500 hover:text-white transition-all duration-300"
+                >
+                  Cyan Slide R→L
+                </button>
+              </div>
+            </div>
+
+            {/* Sliding Effect (Top to Bottom) */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Sliding Effect (Top to Bottom)</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#dc2626",
+                    borderEndColor: "#dc2626",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#dc2626",
+                    textEndColor: "#dc2626",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-all duration-300"
+                >
+                  Red Slide T→B
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#059669",
+                    borderEndColor: "#059669",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#059669",
+                    textEndColor: "#059669",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-green-600 border-2 border-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
+                >
+                  Green Slide T→B
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#7c3aed",
+                    borderEndColor: "#7c3aed",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#7c3aed",
+                    textEndColor: "#7c3aed",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-violet-600 border-2 border-violet-600 hover:bg-violet-600 hover:text-white transition-all duration-300"
+                >
+                  Violet Slide T→B
+                </button>
+              </div>
+            </div>
+
+            {/* Sliding Effect (Bottom to Top) */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Sliding Effect (Bottom to Top)</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#0891b2",
+                    borderEndColor: "#0891b2",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#0891b2",
+                    textEndColor: "#0891b2",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-cyan-600 border-2 border-cyan-600 hover:bg-cyan-600 hover:text-white transition-all duration-300"
+                >
+                  Cyan Slide B→T
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#ea580c",
+                    borderEndColor: "#ea580c",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#ea580c",
+                    textEndColor: "#ea580c",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-orange-600 border-2 border-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300"
+                >
+                  Orange Slide B→T
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    borderStartColor: "#be185d",
+                    borderEndColor: "#be185d",
+                    borderStyle: "solid",
+                    backgroundStartColor: "transparent",
+                    backgroundEndColor: "transparent",
+                    textStartColor: "#be185d",
+                    textEndColor: "#be185d",
+                    transparentBackground: true
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-transparent text-pink-700 border-2 border-pink-700 hover:bg-pink-700 hover:text-white transition-all duration-300"
+                >
+                  Pink Slide B→T
+                </button>
+              </div>
+            </div>
+
+            {/* Transition on Hover (No Border Radius) */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Transition on Hover (No Border Radius)</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#3b82f6",
+                    backgroundEndColor: "#3b82f6",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-300"
+                >
+                  Blue Square
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#10b981",
+                    backgroundEndColor: "#10b981",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-green-500 text-white hover:bg-green-600 transition-colors duration-300"
+                >
+                  Green Square
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#ef4444",
+                    backgroundEndColor: "#ef4444",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#ef4444",
+                    borderEndColor: "#ef4444",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left bg-red-500 text-white hover:bg-red-600 transition-colors duration-300"
+                >
+                  Red Square
+                </button>
+              </div>
+            </div>
+
+            {/* Transition on Hover - Rounded */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Transition on Hover - Rounded</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#8b5cf6",
+                    backgroundEndColor: "#8b5cf6",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#8b5cf6",
+                    borderEndColor: "#8b5cf6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-300"
+                >
+                  Purple Rounded
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#f59e0b",
+                    backgroundEndColor: "#f59e0b",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#f59e0b",
+                    borderEndColor: "#f59e0b",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors duration-300"
+                >
+                  Yellow Rounded
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#06b6d4",
+                    backgroundEndColor: "#06b6d4",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#06b6d4",
+                    borderEndColor: "#06b6d4",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 transition-colors duration-300"
+                >
+                  Cyan Rounded
+                </button>
+              </div>
+            </div>
+
+            {/* Transition on Hover - Fully Rounded */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Transition on Hover - Fully Rounded</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 30,
+                    paddingY: 15,
+                    backgroundStartColor: "#ec4899",
+                    backgroundEndColor: "#ec4899",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#ec4899",
+                    borderEndColor: "#ec4899",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-pink-500 text-white hover:bg-pink-600 transition-colors duration-300"
+                >
+                  Pink Pill Hover
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 30,
+                    paddingY: 15,
+                    backgroundStartColor: "#14b8a6",
+                    backgroundEndColor: "#14b8a6",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#14b8a6",
+                    borderEndColor: "#14b8a6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors duration-300"
+                >
+                  Teal Pill Hover
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me!",
+                    borderWidth: 0,
+                    borderRadius: 50,
+                    paddingX: 30,
+                    paddingY: 15,
+                    backgroundStartColor: "#a855f7",
+                    backgroundEndColor: "#a855f7",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#a855f7",
+                    borderEndColor: "#a855f7",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-full bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-300"
+                >
+                  Purple Pill Hover
+                </button>
+              </div>
+            </div>
+
+            {/* With Arrow on Hover */}
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">With Arrow on Hover</h4>
+              <div className="space-y-2">
+                <button
+                  onClick={() => updateState({
+                    text: "Click me! →",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#3b82f6",
+                    backgroundEndColor: "#3b82f6",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#3b82f6",
+                    borderEndColor: "#3b82f6",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-300"
+                >
+                  Blue Arrow →
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me! →",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#10b981",
+                    backgroundEndColor: "#10b981",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#10b981",
+                    borderEndColor: "#10b981",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors duration-300"
+                >
+                  Green Arrow →
+                </button>
+                <button
+                  onClick={() => updateState({
+                    text: "Click me! →",
+                    borderWidth: 0,
+                    borderRadius: 8,
+                    paddingX: 20,
+                    paddingY: 12,
+                    backgroundStartColor: "#f59e0b",
+                    backgroundEndColor: "#f59e0b",
+                    textStartColor: "#ffffff",
+                    textEndColor: "#ffffff",
+                    borderStartColor: "#f59e0b",
+                    borderEndColor: "#f59e0b",
+                    transparentBackground: false
+                  })}
+                  className="w-full p-2 text-left rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors duration-300"
+                >
+                  Yellow Arrow →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Center Panel - Main Preview */}
+        <div className="w-[40%] bg-gradient-to-br from-gray-50 to-blue-50/30 flex flex-col relative">
+          {/* Decorative Background Elements */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-20 left-10 w-32 h-32 bg-blue-100 rounded-full opacity-20 blur-xl"></div>
+            <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-100 rounded-full opacity-20 blur-xl"></div>
+          </div>
+
+          {/* Sticky Container for Button Text and Preview */}
+          <div className="sticky top-16 z-20 bg-gradient-to-br from-gray-50 to-blue-50/30">
+            {/* Button Text Input */}
+            <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 p-3 relative z-10">
+              <div className="w-[90%] mx-auto">
+                <Label className="text-sm font-medium text-gray-700">Button Text</Label>
+                <Input
+                  type="text"
+                  value={state.text}
+                  onChange={(e) => updateState({ text: e.target.value })}
+                  className="mt-1 text-center border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
+                  placeholder="Enter button text..."
+                />
+              </div>
+            </div>
+
+            {/* Preview Area */}
+            <div className="p-3 relative z-10">
+              <div className="w-[90%] mx-auto text-center space-y-3">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Live Preview</h3>
+                  <p className="text-sm text-gray-500">See your button design in real-time</p>
+                </div>
+                
+                <div className="relative w-full">
+                  <div 
+                    className="w-full h-40 rounded-xl border border-gray-200/50 flex items-center justify-center shadow-inner bg-white/30 backdrop-blur-sm"
+                    style={getPreviewBackgroundStyle(state.previewBackground)}
+                  >
+                  <InteractiveButton
+                    text={state.text}
+                    fontSize={state.fontSize}
+                    fontWeight={state.fontWeight}
+                    borderStartColor={state.borderStartColor}
+                    borderEndColor={state.borderEndColor}
+                    borderDirection={state.borderDirection}
+                    textStartColor={state.textStartColor}
+                    textEndColor={state.textEndColor}
+                    textDirection={state.textDirection}
+                    backgroundStartColor={state.backgroundStartColor}
+                    backgroundEndColor={state.backgroundEndColor}
+                    backgroundDirection={state.backgroundDirection}
+                    paddingX={state.paddingX}
+                    paddingY={state.paddingY}
+                    borderRadius={state.borderRadius}
+                    borderWidth={state.borderWidth}
+                    enable3D={state.enable3D}
+                    shadowIntensity={state.shadowIntensity}
+                    width={state.width}
+                    height={state.height}
+                    transparentBackground={state.transparentBackground}
+                    enableTextShadow={state.enableTextShadow}
+                    textShadowColor={state.textShadowColor}
+                    textShadowX={state.textShadowX}
+                    textShadowY={state.textShadowY}
+                    textShadowBlur={state.textShadowBlur}
+                    enableBoxShadow={state.enableBoxShadow}
+                    boxShadowColor={state.boxShadowColor}
+                    boxShadowX={state.boxShadowX}
+                    boxShadowY={state.boxShadowY}
+                    boxShadowBlur={state.boxShadowBlur}
+                    boxShadowSpread={state.boxShadowSpread}
+                    boxShadowInset={state.boxShadowInset}
+                    borderStyle={state.borderStyle}
+                    />
+                  </div>
+                </div>
+                
+                {/* Preview Background Selection */}
+                <div className="bg-white/70 backdrop-blur-sm rounded-lg p-2 border border-gray-200/50">
+                  <EyedropperColorPicker
+                    value={state.previewBackground}
+                    onChange={(color) => updateState({ previewBackground: color })}
+                    label="Preview Background Color"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CSS Output - Scrollable below sticky preview */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="bg-white/80 backdrop-blur-sm border-t border-gray-200/50 p-3 relative z-10">
+              <div className="w-[90%] mx-auto">
+                <div className="mb-2">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">Generated CSS</h3>
+                  <p className="text-sm text-gray-500">Copy this code to use your button</p>
+                </div>
+                <CSSOutput css={generateCSS()} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - All Controls */}
+        <div className="w-[30%] bg-white/70 backdrop-blur-sm border-l border-gray-200/50 overflow-y-auto">
+          <div className="w-[90%] mx-auto space-y-6 py-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-purple-800 bg-clip-text text-transparent">
+                Customize Design
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Fine-tune every detail</p>
+            </div>
+            {/* Text Content */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Button Text</h3>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Text Content</Label>
+                <Input
+                  type="text"
+                  value={state.text}
+                  onChange={(e) => updateState({ text: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+            </div>
+
+            {/* Typography */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Typography</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Font Size</Label>
+                  <Select value={state.fontSize.toString()} onValueChange={(value) => updateState({ fontSize: parseInt(value) })}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="14">14px</SelectItem>
+                      <SelectItem value="16">16px</SelectItem>
+                      <SelectItem value="18">18px</SelectItem>
+                      <SelectItem value="20">20px</SelectItem>
+                      <SelectItem value="24">24px</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Font Weight</Label>
+                  <Select value={state.fontWeight.toString()} onValueChange={(value) => updateState({ fontWeight: parseInt(value) })}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="400">400 (Normal)</SelectItem>
+                      <SelectItem value="500">500 (Medium)</SelectItem>
+                      <SelectItem value="600">600 (Semi Bold)</SelectItem>
+                      <SelectItem value="700">700 (Bold)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Border Gradient */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Border Gradient</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <ColorPicker
+                  label="Start Color"
+                  value={state.borderStartColor}
+                  onChange={(color) => updateState({ borderStartColor: color })}
+                />
+                <ColorPicker
+                  label="End Color"
+                  value={state.borderEndColor}
+                  onChange={(color) => updateState({ borderEndColor: color })}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Direction</Label>
+                <Select value={state.borderDirection} onValueChange={(value) => updateState({ borderDirection: value })}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="to right">Left to Right</SelectItem>
+                    <SelectItem value="to left">Right to Left</SelectItem>
+                    <SelectItem value="to bottom">Top to Bottom</SelectItem>
+                    <SelectItem value="to top">Bottom to Top</SelectItem>
+                    <SelectItem value="to bottom right">Top-Left to Bottom-Right</SelectItem>
+                    <SelectItem value="to bottom left">Top-Right to Bottom-Left</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Text Gradient */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Text Gradient</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <ColorPicker
+                  label="Start Color"
+                  value={state.textStartColor}
+                  onChange={(color) => updateState({ textStartColor: color })}
+                />
+                <ColorPicker
+                  label="End Color"
+                  value={state.textEndColor}
+                  onChange={(color) => updateState({ textEndColor: color })}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Direction</Label>
+                <Select value={state.textDirection} onValueChange={(value) => updateState({ textDirection: value })}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="to right">Left to Right</SelectItem>
+                    <SelectItem value="to left">Right to Left</SelectItem>
+                    <SelectItem value="to bottom">Top to Bottom</SelectItem>
+                    <SelectItem value="to top">Bottom to Top</SelectItem>
+                    <SelectItem value="to bottom right">Top-Left to Bottom-Right</SelectItem>
+                    <SelectItem value="to bottom left">Top-Right to Bottom-Left</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Background Gradient */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Background Gradient</h3>
+              <div className="flex items-center space-x-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="transparentBackground"
+                  checked={state.transparentBackground}
+                  onChange={(e) => updateState({ transparentBackground: e.target.checked })}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <Label htmlFor="transparentBackground" className="text-sm font-medium text-gray-700">
+                  Transparent Background
+                </Label>
+              </div>
+              {!state.transparentBackground && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <ColorPicker
+                      label="Start Color"
+                      value={state.backgroundStartColor}
+                      onChange={(color) => updateState({ backgroundStartColor: color })}
+                    />
+                    <ColorPicker
+                      label="End Color"
+                      value={state.backgroundEndColor}
+                      onChange={(color) => updateState({ backgroundEndColor: color })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Direction</Label>
+                    <Select value={state.backgroundDirection} onValueChange={(value) => updateState({ backgroundDirection: value })}>
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="to right">Left to Right</SelectItem>
+                        <SelectItem value="to left">Right to Left</SelectItem>
+                        <SelectItem value="to bottom">Top to Bottom</SelectItem>
+                        <SelectItem value="to top">Bottom to Top</SelectItem>
+                        <SelectItem value="to bottom right">Top-Left to Bottom-Right</SelectItem>
+                        <SelectItem value="to bottom left">Top-Right to Bottom-Left</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Dimensions */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Dimensions</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Padding X</Label>
+                  <Slider
+                    value={[state.paddingX]}
+                    onValueChange={(value) => updateState({ paddingX: value[0] })}
+                    max={48}
+                    min={8}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{state.paddingX}px</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Padding Y</Label>
+                  <Slider
+                    value={[state.paddingY]}
+                    onValueChange={(value) => updateState({ paddingY: value[0] })}
+                    max={24}
+                    min={4}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{state.paddingY}px</div>
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Border Radius</Label>
+                <Slider
+                  value={[state.borderRadius]}
+                  onValueChange={(value) => updateState({ borderRadius: value[0] })}
+                  max={50}
+                  min={0}
+                  step={1}
+                  className="mt-2"
+                />
+                <div className="text-xs text-gray-500 mt-1">{state.borderRadius}px</div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Border Width</Label>
+                <Slider
+                  value={[state.borderWidth]}
+                  onValueChange={(value) => updateState({ borderWidth: value[0] })}
+                  max={8}
+                  min={1}
+                  step={1}
+                  className="mt-2"
+                />
+                <div className="text-xs text-gray-500 mt-1">{state.borderWidth}px</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Width</Label>
+                  <Slider
+                    value={[state.width]}
+                    onValueChange={(value) => updateState({ width: value[0] })}
+                    max={500}
+                    min={100}
+                    step={10}
+                    className="mt-2"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{state.width}px</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Height</Label>
+                  <Slider
+                    value={[state.height]}
+                    onValueChange={(value) => updateState({ height: value[0] })}
+                    max={150}
+                    min={30}
+                    step={5}
+                    className="mt-2"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{state.height}px</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3D Effects */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">3D Effects</h3>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="enable3D"
+                  checked={state.enable3D}
+                  onChange={(e) => updateState({ enable3D: e.target.checked })}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <Label htmlFor="enable3D" className="text-sm font-medium text-gray-700">
+                  Enable 3D Effect
+                </Label>
+              </div>
+              {state.enable3D && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Shadow Intensity</Label>
+                  <Slider
+                    value={[state.shadowIntensity]}
+                    onValueChange={(value) => updateState({ shadowIntensity: value[0] })}
+                    max={10}
+                    min={1}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">{state.shadowIntensity}px</div>
+                </div>
+              )}
+            </div>
+
+            {/* Text Shadow */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Text Shadow</h3>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="enableTextShadow"
+                  checked={state.enableTextShadow}
+                  onChange={(e) => updateState({ enableTextShadow: e.target.checked })}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <Label htmlFor="enableTextShadow" className="text-sm font-medium text-gray-700">
+                  Enable Text Shadow
+                </Label>
+              </div>
+              {state.enableTextShadow && (
+                <>
+                  <ColorPicker
+                    label="Shadow Color"
+                    value={state.textShadowColor}
+                    onChange={(color) => updateState({ textShadowColor: color })}
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">X Offset</Label>
+                      <Slider
+                        value={[state.textShadowX]}
+                        onValueChange={(value) => updateState({ textShadowX: value[0] })}
+                        max={20}
+                        min={-20}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.textShadowX}px</div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Y Offset</Label>
+                      <Slider
+                        value={[state.textShadowY]}
+                        onValueChange={(value) => updateState({ textShadowY: value[0] })}
+                        max={20}
+                        min={-20}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.textShadowY}px</div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Blur</Label>
+                      <Slider
+                        value={[state.textShadowBlur]}
+                        onValueChange={(value) => updateState({ textShadowBlur: value[0] })}
+                        max={20}
+                        min={0}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.textShadowBlur}px</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Box Shadow */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Box Shadow</h3>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="enableBoxShadow"
+                  checked={state.enableBoxShadow}
+                  onChange={(e) => updateState({ enableBoxShadow: e.target.checked })}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <Label htmlFor="enableBoxShadow" className="text-sm font-medium text-gray-700">
+                  Enable Box Shadow
+                </Label>
+              </div>
+              {state.enableBoxShadow && (
+                <>
+                  <ColorPicker
+                    label="Shadow Color"
+                    value={state.boxShadowColor}
+                    onChange={(color) => updateState({ boxShadowColor: color })}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="boxShadowInset"
+                      checked={state.boxShadowInset}
+                      onChange={(e) => updateState({ boxShadowInset: e.target.checked })}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    />
+                    <Label htmlFor="boxShadowInset" className="text-sm font-medium text-gray-700">
+                      Inset Shadow
+                    </Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">X Offset</Label>
+                      <Slider
+                        value={[state.boxShadowX]}
+                        onValueChange={(value) => updateState({ boxShadowX: value[0] })}
+                        max={20}
+                        min={-20}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.boxShadowX}px</div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Y Offset</Label>
+                      <Slider
+                        value={[state.boxShadowY]}
+                        onValueChange={(value) => updateState({ boxShadowY: value[0] })}
+                        max={20}
+                        min={-20}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.boxShadowY}px</div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Blur</Label>
+                      <Slider
+                        value={[state.boxShadowBlur]}
+                        onValueChange={(value) => updateState({ boxShadowBlur: value[0] })}
+                        max={20}
+                        min={0}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.boxShadowBlur}px</div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Spread</Label>
+                      <Slider
+                        value={[state.boxShadowSpread]}
+                        onValueChange={(value) => updateState({ boxShadowSpread: value[0] })}
+                        max={10}
+                        min={-10}
+                        step={1}
+                        className="mt-2"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">{state.boxShadowSpread}px</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Border Style */}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Border Style</h3>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Border Type</Label>
+                <Select value={state.borderStyle} onValueChange={(value) => updateState({ borderStyle: value })}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solid">Solid</SelectItem>
+                    <SelectItem value="dotted">Dotted</SelectItem>
+                    <SelectItem value="dashed">Dashed</SelectItem>
+                    <SelectItem value="double">Double</SelectItem>
+                    <SelectItem value="groove">Groove</SelectItem>
+                    <SelectItem value="ridge">Ridge</SelectItem>
+                    <SelectItem value="inset">Inset</SelectItem>
+                    <SelectItem value="outset">Outset</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Advanced CSS Section */}
+            <div className="mt-8 space-y-6">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Advanced CSS Features</h3>
+              
+              {/* Hover Effects */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">Hover Effects</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableHoverEffects"
+                      checked={state.enableHoverEffects}
+                      onChange={(e) => updateState({ enableHoverEffects: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="enableHoverEffects" className="text-sm">Enable Hover Effects</Label>
+                  </div>
+                  
+                  {state.enableHoverEffects && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Scale on Hover</Label>
+                        <Slider
+                          value={[state.hoverScale]}
+                          onValueChange={([value]) => updateState({ hoverScale: value })}
+                          min={0.8}
+                          max={1.5}
+                          step={0.05}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.hoverScale}x</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Rotation (degrees)</Label>
+                        <Slider
+                          value={[state.hoverRotate]}
+                          onValueChange={([value]) => updateState({ hoverRotate: value })}
+                          min={-45}
+                          max={45}
+                          step={1}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.hoverRotate}°</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Skew (degrees)</Label>
+                        <Slider
+                          value={[state.hoverSkew]}
+                          onValueChange={([value]) => updateState({ hoverSkew: value })}
+                          min={-30}
+                          max={30}
+                          step={1}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.hoverSkew}°</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Brightness</Label>
+                        <Slider
+                          value={[state.hoverBrightness]}
+                          onValueChange={([value]) => updateState({ hoverBrightness: value })}
+                          min={0.5}
+                          max={2}
+                          step={0.1}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.hoverBrightness}x</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Animations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">Animations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableAnimation"
+                      checked={state.enableAnimation}
+                      onChange={(e) => updateState({ enableAnimation: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="enableAnimation" className="text-sm">Enable Animation</Label>
+                  </div>
+                  
+                  {state.enableAnimation && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Animation Type</Label>
+                        <Select value={state.animationType} onValueChange={(value) => updateState({ animationType: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="pulse">Pulse</SelectItem>
+                            <SelectItem value="bounce">Bounce</SelectItem>
+                            <SelectItem value="wobble">Wobble</SelectItem>
+                            <SelectItem value="fadeIn">Fade In</SelectItem>
+                            <SelectItem value="slideIn">Slide In</SelectItem>
+                            <SelectItem value="rotate">Rotate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Duration (seconds)</Label>
+                        <Slider
+                          value={[state.animationDuration]}
+                          onValueChange={([value]) => updateState({ animationDuration: value })}
+                          min={0.1}
+                          max={3}
+                          step={0.1}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.animationDuration}s</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Delay (seconds)</Label>
+                        <Slider
+                          value={[state.animationDelay]}
+                          onValueChange={([value]) => updateState({ animationDelay: value })}
+                          min={0}
+                          max={2}
+                          step={0.1}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.animationDelay}s</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Iterations</Label>
+                        <Select value={state.animationIterations} onValueChange={(value) => updateState({ animationIterations: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1</SelectItem>
+                            <SelectItem value="2">2</SelectItem>
+                            <SelectItem value="3">3</SelectItem>
+                            <SelectItem value="infinite">Infinite</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Transform Effects */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">3D Transforms</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableTransform"
+                      checked={state.enableTransform}
+                      onChange={(e) => updateState({ enableTransform: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="enableTransform" className="text-sm">Enable 3D Transforms</Label>
+                  </div>
+                  
+                  {state.enableTransform && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Transform Origin</Label>
+                        <Select value={state.transformOrigin} onValueChange={(value) => updateState({ transformOrigin: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="center">Center</SelectItem>
+                            <SelectItem value="top">Top</SelectItem>
+                            <SelectItem value="bottom">Bottom</SelectItem>
+                            <SelectItem value="left">Left</SelectItem>
+                            <SelectItem value="right">Right</SelectItem>
+                            <SelectItem value="top left">Top Left</SelectItem>
+                            <SelectItem value="top right">Top Right</SelectItem>
+                            <SelectItem value="bottom left">Bottom Left</SelectItem>
+                            <SelectItem value="bottom right">Bottom Right</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Perspective</Label>
+                        <Slider
+                          value={[state.perspective]}
+                          onValueChange={([value]) => updateState({ perspective: value })}
+                          min={100}
+                          max={2000}
+                          step={50}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.perspective}px</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Rotate X (degrees)</Label>
+                        <Slider
+                          value={[state.rotateX]}
+                          onValueChange={([value]) => updateState({ rotateX: value })}
+                          min={-180}
+                          max={180}
+                          step={5}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.rotateX}°</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Rotate Y (degrees)</Label>
+                        <Slider
+                          value={[state.rotateY]}
+                          onValueChange={([value]) => updateState({ rotateY: value })}
+                          min={-180}
+                          max={180}
+                          step={5}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.rotateY}°</span>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Rotate Z (degrees)</Label>
+                        <Slider
+                          value={[state.rotateZ]}
+                          onValueChange={([value]) => updateState({ rotateZ: value })}
+                          min={-180}
+                          max={180}
+                          step={5}
+                          className="mt-2"
+                        />
+                        <span className="text-xs text-gray-500">{state.rotateZ}°</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Pseudo Elements */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">Pseudo Elements</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* ::before element */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableBeforeElement"
+                        checked={state.enableBeforeElement}
+                        onChange={(e) => updateState({ enableBeforeElement: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="enableBeforeElement" className="text-sm">Enable ::before Element</Label>
+                    </div>
+                    
+                    {state.enableBeforeElement && (
+                      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Content</Label>
+                          <Input
+                            value={state.beforeContent}
+                            onChange={(e) => updateState({ beforeContent: e.target.value })}
+                            placeholder="Content text"
+                            className="mt-1"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Width (%)</Label>
+                            <Slider
+                              value={[state.beforeWidth]}
+                              onValueChange={([value]) => updateState({ beforeWidth: value })}
+                              min={0}
+                              max={200}
+                              step={5}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.beforeWidth}%</span>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Height (%)</Label>
+                            <Slider
+                              value={[state.beforeHeight]}
+                              onValueChange={([value]) => updateState({ beforeHeight: value })}
+                              min={0}
+                              max={200}
+                              step={5}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.beforeHeight}%</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Background</Label>
+                          <CompactColorPicker
+                            value={state.beforeBackground}
+                            onChange={(color) => updateState({ beforeBackground: color })}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Position</Label>
+                          <Select value={state.beforePosition} onValueChange={(value) => updateState({ beforePosition: value })}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="absolute">Absolute</SelectItem>
+                              <SelectItem value="relative">Relative</SelectItem>
+                              <SelectItem value="fixed">Fixed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Top (px)</Label>
+                            <Slider
+                              value={[state.beforeTop]}
+                              onValueChange={([value]) => updateState({ beforeTop: value })}
+                              min={-100}
+                              max={100}
+                              step={1}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.beforeTop}px</span>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Left (px)</Label>
+                            <Slider
+                              value={[state.beforeLeft]}
+                              onValueChange={([value]) => updateState({ beforeLeft: value })}
+                              min={-100}
+                              max={100}
+                              step={1}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.beforeLeft}px</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* ::after element */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableAfterElement"
+                        checked={state.enableAfterElement}
+                        onChange={(e) => updateState({ enableAfterElement: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="enableAfterElement" className="text-sm">Enable ::after Element</Label>
+                    </div>
+                    
+                    {state.enableAfterElement && (
+                      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Content</Label>
+                          <Input
+                            value={state.afterContent}
+                            onChange={(e) => updateState({ afterContent: e.target.value })}
+                            placeholder="Content text"
+                            className="mt-1"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Width (%)</Label>
+                            <Slider
+                              value={[state.afterWidth]}
+                              onValueChange={([value]) => updateState({ afterWidth: value })}
+                              min={0}
+                              max={200}
+                              step={5}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.afterWidth}%</span>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Height (%)</Label>
+                            <Slider
+                              value={[state.afterHeight]}
+                              onValueChange={([value]) => updateState({ afterHeight: value })}
+                              min={0}
+                              max={200}
+                              step={5}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.afterHeight}%</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Background</Label>
+                          <CompactColorPicker
+                            value={state.afterBackground}
+                            onChange={(color) => updateState({ afterBackground: color })}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Position</Label>
+                          <Select value={state.afterPosition} onValueChange={(value) => updateState({ afterPosition: value })}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="absolute">Absolute</SelectItem>
+                              <SelectItem value="relative">Relative</SelectItem>
+                              <SelectItem value="fixed">Fixed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Top (px)</Label>
+                            <Slider
+                              value={[state.afterTop]}
+                              onValueChange={([value]) => updateState({ afterTop: value })}
+                              min={-100}
+                              max={100}
+                              step={1}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.afterTop}px</span>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Left (px)</Label>
+                            <Slider
+                              value={[state.afterLeft]}
+                              onValueChange={([value]) => updateState({ afterLeft: value })}
+                              min={-100}
+                              max={100}
+                              step={1}
+                              className="mt-2"
+                            />
+                            <span className="text-xs text-gray-500">{state.afterLeft}px</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Advanced Effects */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">Advanced Effects</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Clip Path */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableClipPath"
+                        checked={state.enableClipPath}
+                        onChange={(e) => updateState({ enableClipPath: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="enableClipPath" className="text-sm">Enable Clip Path</Label>
+                    </div>
+                    
+                    {state.enableClipPath && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Clip Path</Label>
+                        <Select value={state.clipPath} onValueChange={(value) => updateState({ clipPath: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="polygon(0 0, 100% 0, 100% 100%, 0 100%)">Rectangle</SelectItem>
+                            <SelectItem value="polygon(50% 0%, 0% 100%, 100% 100%)">Triangle</SelectItem>
+                            <SelectItem value="polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)">Hexagon</SelectItem>
+                            <SelectItem value="polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)">Octagon</SelectItem>
+                            <SelectItem value="circle(50% at 50% 50%)">Circle</SelectItem>
+                            <SelectItem value="ellipse(25% 40% at 50% 50%)">Ellipse</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Backdrop Filter */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableBackdropFilter"
+                        checked={state.enableBackdropFilter}
+                        onChange={(e) => updateState({ enableBackdropFilter: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="enableBackdropFilter" className="text-sm">Enable Backdrop Filter</Label>
+                    </div>
+                    
+                    {state.enableBackdropFilter && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Backdrop Filter</Label>
+                        <Select value={state.backdropFilter} onValueChange={(value) => updateState({ backdropFilter: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="blur(5px)">Blur (5px)</SelectItem>
+                            <SelectItem value="blur(10px)">Blur (10px)</SelectItem>
+                            <SelectItem value="blur(20px)">Blur (20px)</SelectItem>
+                            <SelectItem value="brightness(1.5)">Brightness (1.5x)</SelectItem>
+                            <SelectItem value="contrast(1.5)">Contrast (1.5x)</SelectItem>
+                            <SelectItem value="saturate(2)">Saturate (2x)</SelectItem>
+                            <SelectItem value="sepia(1)">Sepia</SelectItem>
+                            <SelectItem value="grayscale(1)">Grayscale</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Mix Blend Mode */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableMixBlendMode"
+                        checked={state.enableMixBlendMode}
+                        onChange={(e) => updateState({ enableMixBlendMode: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="enableMixBlendMode" className="text-sm">Enable Mix Blend Mode</Label>
+                    </div>
+                    
+                    {state.enableMixBlendMode && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Mix Blend Mode</Label>
+                        <Select value={state.mixBlendMode} onValueChange={(value) => updateState({ mixBlendMode: value })}>
+                          <SelectTrigger className="mt-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="multiply">Multiply</SelectItem>
+                            <SelectItem value="screen">Screen</SelectItem>
+                            <SelectItem value="overlay">Overlay</SelectItem>
+                            <SelectItem value="darken">Darken</SelectItem>
+                            <SelectItem value="lighten">Lighten</SelectItem>
+                            <SelectItem value="color-dodge">Color Dodge</SelectItem>
+                            <SelectItem value="color-burn">Color Burn</SelectItem>
+                            <SelectItem value="hard-light">Hard Light</SelectItem>
+                            <SelectItem value="soft-light">Soft Light</SelectItem>
+                            <SelectItem value="difference">Difference</SelectItem>
+                            <SelectItem value="exclusion">Exclusion</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Custom CSS */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">Custom CSS</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableAdvancedCSS"
+                      checked={state.enableAdvancedCSS}
+                      onChange={(e) => updateState({ enableAdvancedCSS: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="enableAdvancedCSS" className="text-sm">Enable Custom CSS</Label>
+                  </div>
+                  
+                  {state.enableAdvancedCSS && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">Custom CSS Rules</Label>
+                      <textarea
+                        value={state.customCSS}
+                        onChange={(e) => updateState({ customCSS: e.target.value })}
+                        placeholder="Enter custom CSS properties here..."
+                        className="mt-2 w-full h-24 p-3 border border-gray-300 rounded-md text-sm font-mono"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Add any custom CSS properties. Example: box-shadow: inset 0 0 20px rgba(255,255,255,0.1);
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Custom Properties */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-md">CSS Variables</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enableCustomProperties"
+                      checked={state.enableCustomProperties}
+                      onChange={(e) => updateState({ enableCustomProperties: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="enableCustomProperties" className="text-sm">Enable CSS Variables</Label>
+                  </div>
+                  
+                  {state.enableCustomProperties && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">CSS Variables</Label>
+                      <textarea
+                        value={state.customProperties}
+                        onChange={(e) => updateState({ customProperties: e.target.value })}
+                        placeholder="--primary-color: #3b82f6;&#10;--secondary-color: #10b981;"
+                        className="mt-2 w-full h-20 p-3 border border-gray-300 rounded-md text-sm font-mono"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Define CSS variables (custom properties) that can be used in your button styles.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
