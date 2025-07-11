@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./railway-routes";
-import { setupVite, log } from "./vite";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -36,7 +35,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -50,32 +49,27 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
-    throw err;
+    console.error(err);
   });
 
-  if (process.env.NODE_ENV !== "production") {
-    await setupVite(app, server);
-  } else {
-    // Serve static files in production
-    const publicPath = path.join(__dirname, "../dist");
-    app.use(express.static(publicPath));
-    
-    // Serve index.html for all non-API routes
-    app.get("*", (req, res) => {
-      if (!req.path.startsWith("/api")) {
-        res.sendFile(path.join(publicPath, "index.html"));
-      }
-    });
-  }
+  // Serve static files in production
+  const staticPath = path.join(__dirname, ".");
+  app.use(express.static(staticPath));
+  
+  // Serve index.html for all non-API routes
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      res.sendFile(path.join(staticPath, "index.html"));
+    }
+  });
 
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 8080;
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
-    log(`🚀 CSS Button Maker server running on port ${port}`);
-    log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-    log(`🏥 Health check: http://localhost:${port}/health`);
+    console.log(`🚀 CSS Button Maker server running on port ${port}`);
+    console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🏥 Health check: http://localhost:${port}/health`);
   });
 })();
