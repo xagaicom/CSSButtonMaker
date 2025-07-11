@@ -53,15 +53,17 @@ app.use((req, res, next) => {
   });
 
   // Serve static files in production
-  const staticPath = path.join(__dirname, ".");
-  app.use(express.static(staticPath));
-  
-  // Serve index.html for all non-API routes
-  app.get("*", (req, res) => {
-    if (!req.path.startsWith("/api")) {
-      res.sendFile(path.join(staticPath, "index.html"));
-    }
-  });
+  if (process.env.NODE_ENV === "production") {
+    const staticPath = path.join(__dirname, ".");
+    app.use(express.static(staticPath));
+    
+    // Serve index.html for all non-API routes
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api")) {
+        res.sendFile(path.join(staticPath, "index.html"));
+      }
+    });
+  }
 
   const port = process.env.PORT ? parseInt(process.env.PORT) : 8080;
   server.listen({
