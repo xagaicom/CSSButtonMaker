@@ -457,15 +457,22 @@ async function registerRoutes(app: Express): Promise<Server> {
     console.error(err);
   });
 
-  // Serve static files in production
+  // RAILWAY FIX: Serve static files from correct directory
   if (process.env.NODE_ENV === "production") {
-    const publicPath = path.join(__dirname, "public");
+    // Railway/esbuild puts files in dist, and server runs from dist/
+    // So we need to go up one level to find the frontend files
+    const publicPath = path.join(__dirname, "..", "dist");
+    console.log(`🗂️  RAILWAY: Serving static files from: ${publicPath}`);
+    
     app.use(express.static(publicPath));
     
-    // Serve index.html for all non-API routes
+    // SPA catch-all route - serve index.html for all non-API routes
     app.get("*", (req, res) => {
       if (!req.path.startsWith("/api")) {
+        console.log(`📄 RAILWAY: Serving index.html for route: ${req.path}`);
         res.sendFile(path.join(publicPath, "index.html"));
+      } else {
+        res.status(404).json({ message: "API endpoint not found" });
       }
     });
   }
@@ -480,5 +487,9 @@ async function registerRoutes(app: Express): Promise<Server> {
     log(`🚀 CSS Button Maker server running on port ${port}`);
     log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
     log(`🏥 Health check: http://localhost:${port}/health`);
+    
+    if (process.env.NODE_ENV === "production") {
+      log(`🌐 RAILWAY: Frontend served from: ${path.join(__dirname, "..", "dist")}`);
+    }
   });
 })();
