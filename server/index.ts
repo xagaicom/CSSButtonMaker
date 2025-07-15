@@ -1,7 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertButtonDesignSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
 const session = require('express-session');
 import path from "path";
@@ -22,6 +20,182 @@ function log(message: string, source = "express") {
   });
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+// In-memory storage for Railway (no database dependencies)
+class SimpleStorage {
+  private buttonDesigns: any[] = [];
+  private customButtons: any[] = [];
+  private adSpaces: any[] = [];
+  private appSettings: any[] = [];
+  private admins: any[] = [];
+  private users: any[] = [];
+
+  // Button design operations
+  async saveButtonDesign(design: any) {
+    const id = Date.now();
+    const newDesign = { ...design, id, createdAt: new Date() };
+    this.buttonDesigns.push(newDesign);
+    return newDesign;
+  }
+
+  async getAllButtonDesigns(limit = 100) {
+    return this.buttonDesigns.slice(0, limit);
+  }
+
+  async getButtonDesign(id: number) {
+    return this.buttonDesigns.find(d => d.id === id);
+  }
+
+  async deleteButtonDesign(id: number, userId: string) {
+    const index = this.buttonDesigns.findIndex(d => d.id === id && d.userId === userId);
+    if (index !== -1) {
+      this.buttonDesigns.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // Custom button operations
+  async createCustomButton(button: any) {
+    const id = Date.now();
+    const newButton = { ...button, id, createdAt: new Date() };
+    this.customButtons.push(newButton);
+    return newButton;
+  }
+
+  async getAllCustomButtons() {
+    return this.customButtons;
+  }
+
+  async getCustomButton(id: number) {
+    return this.customButtons.find(b => b.id === id);
+  }
+
+  async deleteCustomButton(id: number) {
+    const index = this.customButtons.findIndex(b => b.id === id);
+    if (index !== -1) {
+      this.customButtons.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // Ad space operations
+  async createAdSpace(adSpace: any) {
+    const id = Date.now();
+    const newAdSpace = { ...adSpace, id, createdAt: new Date() };
+    this.adSpaces.push(newAdSpace);
+    return newAdSpace;
+  }
+
+  async getAllAdSpaces() {
+    return this.adSpaces;
+  }
+
+  async getAdSpace(id: number) {
+    return this.adSpaces.find(a => a.id === id);
+  }
+
+  async getAdSpacesByLocation(location: string) {
+    return this.adSpaces.filter(a => a.location === location && a.isActive);
+  }
+
+  async updateAdSpace(id: number, updates: any) {
+    const index = this.adSpaces.findIndex(a => a.id === id);
+    if (index !== -1) {
+      this.adSpaces[index] = { ...this.adSpaces[index], ...updates };
+      return this.adSpaces[index];
+    }
+    return undefined;
+  }
+
+  async deleteAdSpace(id: number) {
+    const index = this.adSpaces.findIndex(a => a.id === id);
+    if (index !== -1) {
+      this.adSpaces.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // App settings operations
+  async getAppSetting(key: string) {
+    return this.appSettings.find(s => s.key === key);
+  }
+
+  async setAppSetting(setting: any) {
+    const index = this.appSettings.findIndex(s => s.key === setting.key);
+    if (index !== -1) {
+      this.appSettings[index] = { ...this.appSettings[index], ...setting };
+      return this.appSettings[index];
+    } else {
+      const newSetting = { ...setting, id: Date.now() };
+      this.appSettings.push(newSetting);
+      return newSetting;
+    }
+  }
+
+  async getAllAppSettings() {
+    return this.appSettings;
+  }
+
+  async deleteAppSetting(key: string) {
+    const index = this.appSettings.findIndex(s => s.key === key);
+    if (index !== -1) {
+      this.appSettings.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  // Admin operations
+  async createAdmin(admin: any) {
+    const id = `admin_${Date.now()}`;
+    const newAdmin = { ...admin, id, createdAt: new Date() };
+    this.admins.push(newAdmin);
+    return newAdmin;
+  }
+
+  async getAdminByUsername(username: string) {
+    return this.admins.find(a => a.username === username);
+  }
+
+  async getAllAdmins() {
+    return this.admins.map(a => ({ id: a.id, username: a.username }));
+  }
+
+  // User operations
+  async getUser(id: string) {
+    return this.users.find(u => u.id === id);
+  }
+
+  async upsertUser(userData: any) {
+    const index = this.users.findIndex(u => u.id === userData.id);
+    if (index !== -1) {
+      this.users[index] = { ...this.users[index], ...userData };
+      return this.users[index];
+    } else {
+      const newUser = { ...userData, createdAt: new Date() };
+      this.users.push(newUser);
+      return newUser;
+    }
+  }
+
+  async getAllUsers() {
+    return this.users;
+  }
+
+  async updateUserRole(id: string, role: string) {
+    const index = this.users.findIndex(u => u.id === id);
+    if (index !== -1) {
+      this.users[index] = { ...this.users[index], role };
+      return this.users[index];
+    }
+    return undefined;
+  }
+}
+
+const storage = new SimpleStorage();
 
 // Debug environment variables in production
 if (process.env.NODE_ENV === 'production') {
@@ -122,9 +296,8 @@ async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/button-designs', async (req, res) => {
     try {
-      const validatedData = insertButtonDesignSchema.parse(req.body);
       const design = await storage.saveButtonDesign({
-        ...validatedData,
+        ...req.body,
         userId: 'anonymous'
       });
       res.status(201).json(design);
