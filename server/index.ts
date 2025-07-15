@@ -457,11 +457,10 @@ async function registerRoutes(app: Express): Promise<Server> {
     console.error(err);
   });
 
-  // RAILWAY FIX: Serve static files from correct directory
+  // RAILWAY FIX: Serve static files from dist/client/ directory
   if (process.env.NODE_ENV === "production") {
-    // Railway/esbuild puts files in dist, and server runs from dist/
-    // So we need to go up one level to find the frontend files
-    const publicPath = path.join(__dirname, "..", "dist");
+    // Frontend is in dist/client/, backend is in dist/index.js
+    const publicPath = path.join(__dirname, "..", "dist", "client");
     console.log(`🗂️  RAILWAY: Serving static files from: ${publicPath}`);
     
     app.use(express.static(publicPath));
@@ -489,7 +488,7 @@ async function registerRoutes(app: Express): Promise<Server> {
     log(`🏥 Health check: http://localhost:${port}/health`);
     
     if (process.env.NODE_ENV === "production") {
-      log(`🌐 RAILWAY: Frontend served from: ${path.join(__dirname, "..", "dist")}`);
+      log(`🌐 RAILWAY: Frontend served from: ${path.join(__dirname, "..", "dist", "client")}`);
     }
   });
 })();
