@@ -4,20 +4,18 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: "./client",
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./client/src"),
-      "@shared": path.resolve(__dirname, "./shared"),
+      "@": path.resolve(__dirname, "./src"),
+      "@assets": path.resolve(__dirname, "../attached_assets"),
+      "@shared": path.resolve(__dirname, "../shared"),
     },
   },
   build: {
-   outDir: "../dist/client",
-    assetsDir: "assets",
+    outDir: "../dist/public",
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
-    host: "0.0.0.0",
+    port: 3000,
   },
 });
