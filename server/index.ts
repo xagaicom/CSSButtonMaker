@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
-const session = require('express-session');
+import session from 'express-session';
 import path from "path";
 import { fileURLToPath } from "url";
 
