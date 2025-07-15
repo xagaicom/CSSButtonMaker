@@ -197,18 +197,7 @@ class SimpleStorage {
 
 const storage = new SimpleStorage();
 
-// Debug environment variables in production
-if (process.env.NODE_ENV === 'production') {
-  console.log("🔍 Environment Debug:", {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    DATABASE_URL: process.env.DATABASE_URL ? '[SET]' : '[NOT SET]',
-    SESSION_SECRET: process.env.SESSION_SECRET ? '[SET]' : '[NOT SET]',
-    REPL_ID: process.env.REPL_ID ? '[SET]' : '[NOT SET]',
-    REPLIT_DOMAINS: process.env.REPLIT_DOMAINS ? '[SET]' : '[NOT SET]'
-  });
-}
-
+// Express setup
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -231,264 +220,255 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
-// Register routes directly in the server
-async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint for Railway
-  app.get('/health', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV,
-      port: process.env.PORT || 5000
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    port: process.env.PORT || 5000
+  });
+});
+
+// Simple session management
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'railway-fallback-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }
+}));
+
+// Admin middleware
+const requireAdmin = (req: any, res: any, next: any) => {
+  const isAuthenticated = (req.session as any)?.isAdminAuthenticated || false;
+  if (!isAuthenticated) {
+    return res.status(401).json({ message: "Admin authentication required" });
+  }
+  next();
+};
+
+// Auth routes
+app.get('/api/auth/user', (req: any, res) => {
+  res.status(401).json({ message: "Unauthorized" });
+});
+
+app.get('/api/auth/admin-status', (req: any, res) => {
+  const isAdmin = (req.session as any)?.isAdminAuthenticated || false;
+  res.json({ isAdmin, role: isAdmin ? 'admin' : 'user' });
+});
+
+// Button designs API
+app.get('/api/button-designs', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 100;
+    const designs = await storage.getAllButtonDesigns(limit);
+    res.json(designs);
+  } catch (error) {
+    console.error("Error fetching button designs:", error);
+    res.status(500).json({ message: "Failed to fetch button designs" });
+  }
+});
+
+app.post('/api/button-designs', async (req, res) => {
+  try {
+    const design = await storage.saveButtonDesign({
+      ...req.body,
+      userId: 'anonymous'
     });
-  });
+    res.status(201).json(design);
+  } catch (error) {
+    console.error("Error saving button design:", error);
+    res.status(500).json({ message: "Failed to save button design" });
+  }
+});
 
-  // Simple session management for Railway
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'railway-fallback-secret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }
-  }));
+// Custom buttons API
+app.get('/api/custom-buttons', async (req, res) => {
+  try {
+    const buttons = await storage.getAllCustomButtons();
+    res.json(buttons);
+  } catch (error) {
+    console.error("Error fetching custom buttons:", error);
+    res.status(500).json({ message: "Failed to fetch custom buttons" });
+  }
+});
 
-  // Admin middleware for protected routes
-  const requireAdmin = (req: any, res: any, next: any) => {
-    const isAuthenticated = (req.session as any)?.isAdminAuthenticated || false;
-    if (!isAuthenticated) {
-      return res.status(401).json({ message: "Admin authentication required" });
+app.post('/api/admin/custom-buttons', requireAdmin, async (req, res) => {
+  try {
+    const { buttonText, cssCode } = req.body;
+    if (!buttonText || !cssCode) {
+      return res.status(400).json({ message: "Button text and CSS code are required" });
     }
-    next();
-  };
 
-  // Simplified auth routes for Railway
-  app.get('/api/auth/user', (req: any, res) => {
-    res.status(401).json({ message: "Unauthorized" });
-  });
+    const button = await storage.createCustomButton({
+      buttonText,
+      cssCode,
+      htmlCode: `<button class="custom-btn">${buttonText}</button>`,
+      description: `Custom button: ${buttonText}`,
+      name: buttonText
+    });
 
-  app.get('/api/auth/admin-status', (req: any, res) => {
-    const isAdmin = (req.session as any)?.isAdminAuthenticated || false;
-    res.json({ isAdmin, role: isAdmin ? 'admin' : 'user' });
-  });
+    res.status(201).json(button);
+  } catch (error) {
+    console.error("Error creating custom button:", error);
+    res.status(500).json({ message: "Failed to create custom button" });
+  }
+});
 
-  // API routes for button designs
-  app.get('/api/button-designs', async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 100;
-      const designs = await storage.getAllButtonDesigns(limit);
-      res.json(designs);
-    } catch (error) {
-      console.error("Error fetching button designs:", error);
-      res.status(500).json({ message: "Failed to fetch button designs" });
+// Ad spaces API
+app.get('/api/ad-spaces/location/:location', async (req, res) => {
+  try {
+    const { location } = req.params;
+    const adSpaces = await storage.getAdSpacesByLocation(location);
+    res.json(adSpaces);
+  } catch (error) {
+    console.error("Error fetching ad spaces:", error);
+    res.status(500).json({ message: "Failed to fetch ad spaces" });
+  }
+});
+
+app.post('/api/admin/ad-spaces', requireAdmin, async (req, res) => {
+  try {
+    const adSpace = await storage.createAdSpace(req.body);
+    res.status(201).json(adSpace);
+  } catch (error) {
+    console.error("Error creating ad space:", error);
+    res.status(500).json({ message: "Failed to create ad space" });
+  }
+});
+
+// App settings API
+app.get('/api/app-settings', async (req, res) => {
+  try {
+    const settings = await storage.getAllAppSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error("Error fetching app settings:", error);
+    res.status(500).json({ message: "Failed to fetch app settings" });
+  }
+});
+
+app.post('/api/admin/app-settings', requireAdmin, async (req, res) => {
+  try {
+    const setting = await storage.setAppSetting(req.body);
+    res.status(201).json(setting);
+  } catch (error) {
+    console.error("Error creating app setting:", error);
+    res.status(500).json({ message: "Failed to create app setting" });
+  }
+});
+
+// Admin authentication
+app.post('/api/admin/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password required" });
     }
-  });
 
-  app.post('/api/button-designs', async (req, res) => {
-    try {
-      const design = await storage.saveButtonDesign({
-        ...req.body,
-        userId: 'anonymous'
-      });
-      res.status(201).json(design);
-    } catch (error) {
-      console.error("Error saving button design:", error);
-      res.status(500).json({ message: "Failed to save button design" });
+    const existingAdmins = await storage.getAllAdmins();
+    if (existingAdmins.length > 0) {
+      return res.status(403).json({ message: "Admin already exists" });
     }
-  });
 
-  // Custom buttons API
-  app.get('/api/custom-buttons', async (req, res) => {
-    try {
-      const buttons = await storage.getAllCustomButtons();
-      res.json(buttons);
-    } catch (error) {
-      console.error("Error fetching custom buttons:", error);
-      res.status(500).json({ message: "Failed to fetch custom buttons" });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const admin = await storage.createAdmin({ username, password: hashedPassword });
+
+    (req.session as any).adminId = admin.id;
+    (req.session as any).isAdminAuthenticated = true;
+
+    res.json({ message: "Admin created successfully", admin: { id: admin.id, username: admin.username } });
+  } catch (error) {
+    console.error("Error creating admin:", error);
+    res.status(500).json({ message: "Failed to create admin" });
+  }
+});
+
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password required" });
     }
-  });
 
-  app.post('/api/admin/custom-buttons', requireAdmin, async (req, res) => {
-    try {
-      const { buttonText, cssCode } = req.body;
-      if (!buttonText || !cssCode) {
-        return res.status(400).json({ message: "Button text and CSS code are required" });
-      }
-
-      const button = await storage.createCustomButton({
-        buttonText,
-        cssCode,
-        htmlCode: `<button class="custom-btn">${buttonText}</button>`,
-        description: `Custom button: ${buttonText}`,
-        name: buttonText
-      });
-
-      res.status(201).json(button);
-    } catch (error) {
-      console.error("Error creating custom button:", error);
-      res.status(500).json({ message: "Failed to create custom button" });
+    const admin = await storage.getAdminByUsername(username);
+    if (!admin) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-  });
 
-  // Ad spaces API
-  app.get('/api/ad-spaces/location/:location', async (req, res) => {
-    try {
-      const { location } = req.params;
-      const adSpaces = await storage.getAdSpacesByLocation(location);
-      res.json(adSpaces);
-    } catch (error) {
-      console.error("Error fetching ad spaces:", error);
-      res.status(500).json({ message: "Failed to fetch ad spaces" });
+    const isValid = await bcrypt.compare(password, admin.password);
+    if (!isValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-  });
 
-  app.post('/api/admin/ad-spaces', requireAdmin, async (req, res) => {
-    try {
-      const adSpace = await storage.createAdSpace(req.body);
-      res.status(201).json(adSpace);
-    } catch (error) {
-      console.error("Error creating ad space:", error);
-      res.status(500).json({ message: "Failed to create ad space" });
+    (req.session as any).adminId = admin.id;
+    (req.session as any).isAdminAuthenticated = true;
+
+    res.json({ message: "Login successful", admin: { id: admin.id, username: admin.username } });
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Login failed" });
+  }
+});
+
+app.post('/api/admin/logout', (req: any, res) => {
+  req.session.destroy((err: any) => {
+    if (err) {
+      return res.status(500).json({ message: "Could not log out" });
     }
-  });
-
-  // App settings API
-  app.get('/api/app-settings', async (req, res) => {
-    try {
-      const settings = await storage.getAllAppSettings();
-      res.json(settings);
-    } catch (error) {
-      console.error("Error fetching app settings:", error);
-      res.status(500).json({ message: "Failed to fetch app settings" });
-    }
-  });
-
-  app.post('/api/admin/app-settings', requireAdmin, async (req, res) => {
-    try {
-      const setting = await storage.setAppSetting(req.body);
-      res.status(201).json(setting);
-    } catch (error) {
-      console.error("Error creating app setting:", error);
-      res.status(500).json({ message: "Failed to create app setting" });
-    }
-  });
-
-  // Simple admin authentication
-  app.post('/api/admin/register', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-
-      const existingAdmins = await storage.getAllAdmins();
-      if (existingAdmins.length > 0) {
-        return res.status(403).json({ message: "Admin already exists" });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const admin = await storage.createAdmin({ username, password: hashedPassword });
-
-      (req.session as any).adminId = admin.id;
-      (req.session as any).isAdminAuthenticated = true;
-
-      res.json({ message: "Admin created successfully", admin: { id: admin.id, username: admin.username } });
-    } catch (error) {
-      console.error("Error creating admin:", error);
-      res.status(500).json({ message: "Failed to create admin" });
-    }
-  });
-
-  app.post('/api/admin/login', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-
-      const admin = await storage.getAdminByUsername(username);
-      if (!admin) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const isValid = await bcrypt.compare(password, admin.password);
-      if (!isValid) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      (req.session as any).adminId = admin.id;
-      (req.session as any).isAdminAuthenticated = true;
-
-      res.json({ message: "Login successful", admin: { id: admin.id, username: admin.username } });
-    } catch (error) {
-      console.error("Error during login:", error);
-      res.status(500).json({ message: "Login failed" });
-    }
-  });
-
-  app.post('/api/admin/logout', (req, res) => {
-    (req.session as any).isAdminAuthenticated = false;
-    delete (req.session as any).adminId;
     res.json({ message: "Logout successful" });
   });
+});
 
-  const httpServer = createServer(app);
-  return httpServer;
-}
+// Error handling middleware
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+  console.error(err);
+});
 
-// Main server setup
-(async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-    console.error(err);
-  });
-
-  // RAILWAY FIX: Serve static files from dist/client/ directory
-  if (process.env.NODE_ENV === "production") {
-    // Frontend is in dist/client/, backend is in dist/index.js
-    const publicPath = path.join(__dirname, "..", "dist", "client");
-    console.log(`🗂️  RAILWAY: Serving static files from: ${publicPath}`);
-    
-    app.use(express.static(publicPath));
-    
-    // SPA catch-all route - serve index.html for all non-API routes
-    app.get("*", (req, res) => {
-      if (!req.path.startsWith("/api")) {
-        console.log(`📄 RAILWAY: Serving index.html for route: ${req.path}`);
-        res.sendFile(path.join(publicPath, "index.html"));
-      } else {
-        res.status(404).json({ message: "API endpoint not found" });
-      }
-    });
-  }
-
-  // Use Railway's PORT environment variable in production, fallback to 5000 for development
-  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`🚀 CSS Button Maker server running on port ${port}`);
-    log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-    log(`🏥 Health check: http://localhost:${port}/health`);
-    
-    if (process.env.NODE_ENV === "production") {
-      log(`🌐 RAILWAY: Frontend served from: ${path.join(__dirname, "..", "dist", "client")}`);
+// Production static file serving
+if (process.env.NODE_ENV === "production") {
+  const publicPath = path.join(__dirname, "..", "dist", "client");
+  log(`🗂️  RAILWAY: Serving static files from: ${publicPath}`);
+  
+  app.use(express.static(publicPath));
+  
+  // SPA catch-all route
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api")) {
+      log(`📄 RAILWAY: Serving index.html for route: ${req.path}`);
+      res.sendFile(path.join(publicPath, "index.html"));
+    } else {
+      res.status(404).json({ message: "API endpoint not found" });
     }
   });
-})();
+}
+
+// Server startup
+const httpServer = createServer(app);
+const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+
+httpServer.listen({
+  port,
+  host: "0.0.0.0",
+  reusePort: true,
+}, () => {
+  log(`🚀 CSS Button Maker server running on port ${port}`);
+  log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+  log(`🏥 Health check: http://localhost:${port}/health`);
+  
+  if (process.env.NODE_ENV === "production") {
+    log(`🌐 RAILWAY: Frontend served from: ${path.join(__dirname, "..", "dist", "client")}`);
+  }
+});
