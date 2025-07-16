@@ -13,11 +13,14 @@ import { SimpleColorPicker } from "@/components/simple-color-picker";
 import { HeaderBannerAd, LeftSidebarAd, RightSidebarAd, CSSOutputAd, ModalAd } from "@/components/ad-space";
 import { CSSOutput } from "@/components/css-output";
 import { SavedDesigns } from "@/components/saved-designs";
-import { ButtonStyleAudit } from "@/components/button-style-audit";
-import { RotateCcw, LogOut, User, Image, Sparkles, Bug } from "lucide-react";
+import { RotateCcw, Image, Sparkles, Palette, Type, Settings, Layers, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatedButton } from "@/components/animated-button";
+import { AnimatedCard, PresetCard, StaggeredContainer } from "@/components/animated-card";
+import { AnimatedSlider, AnimatedInput, AnimatedSwitch, AnimatedCollapsible } from "@/components/animated-controls";
+import { FloatingParticles, SuccessCheckmark, MagneticHover, PulseHighlight } from "@/components/micro-animations";
+import { motion, AnimatePresence } from "framer-motion";
 // CSS Logo placeholder - using CSS icon instead
 
 interface CustomButton {
@@ -150,7 +153,7 @@ interface ButtonState {
 }
 
 const initialState: ButtonState = {
-  text: "BOOK FREE MEETING",
+  text: "CSSButtonMaker.com",
   fontSize: 16,
   fontWeight: 600,
   borderStartColor: "#10b981",
@@ -642,9 +645,9 @@ const modernButtonStyles = {
 export default function GradientDesigner() {
   const [state, setState] = useState<ButtonState>(initialState);
   const [showCode, setShowCode] = useState(false);
-  const [showAudit, setShowAudit] = useState(false);
+  const [showSuccessCheck, setShowSuccessCheck] = useState(false);
+
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
 
   // Fetch custom buttons from admin
   const { data: customButtons = [] } = useQuery<CustomButton[]>({
@@ -915,7 +918,8 @@ export default function GradientDesigner() {
   }, [state]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative">
+      <FloatingParticles />
       {/* Header Banner Ad (Top Priority) */}
       <HeaderBannerAd className="w-full flex justify-center py-2 bg-white/90 border-b border-gray-200/30" />
 
@@ -956,48 +960,26 @@ export default function GradientDesigner() {
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span>Live Preview</span>
             </div>
-            <Button
+            <AnimatedButton
               variant="outline"
               onClick={() => window.location.href = '/gallery'}
               className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+              animationType="bounce"
+              icon={<Image className="w-4 h-4" />}
             >
-              <Image className="w-4 h-4" />
-              <span>Gallery</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowAudit(true)}
-              className="flex items-center space-x-2 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
-            >
-              <Bug className="w-4 h-4" />
-              <span>Audit</span>
-            </Button>
-            <Button
+              Gallery
+            </AnimatedButton>
+
+            <AnimatedButton
               variant="outline"
               onClick={resetState}
               className="flex items-center space-x-2 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200"
+              animationType="pulse"
+              icon={<RotateCcw className="w-4 h-4" />}
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Reset</span>
-            </Button>
-            {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                onClick={() => window.location.href = '/api/logout'}
-                className="flex items-center space-x-2 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </Button>
-            ) : (
-              <Button
-                onClick={() => window.location.href = '/api/login'}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <User className="w-4 h-4" />
-                <span>Login</span>
-              </Button>
-            )}
+              Reset
+            </AnimatedButton>
+
           </div>
         </div>
       </header>
@@ -3765,25 +3747,7 @@ export default function GradientDesigner() {
         </div>
       )}
 
-      {/* Button Style Audit Modal */}
-      {showAudit && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto relative z-[51]">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Button Style Audit</h2>
-                <button
-                  onClick={() => setShowAudit(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold px-2 py-1"
-                >
-                  ×
-                </button>
-              </div>
-              <ButtonStyleAudit />
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

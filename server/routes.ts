@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
-import { insertButtonDesignSchema } from "@shared/schema";
-// Remove Replit auth for Railway deployment
+import { setupAuth, isAuthenticated, isAdmin, requireAdminSession } from "./replitAuth";
 import bcrypt from "bcrypt";
+import { sendEmail, generatePasswordResetEmail } from "./email-service";
+import { insertButtonDesignSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Railway
@@ -196,34 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple admin authentication system
-  app.post('/api/admin/register', async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-
-      // Check if any admin already exists
-      const existingAdmins = await storage.getAllAdmins();
-      if (existingAdmins.length > 0) {
-        return res.status(403).json({ message: "Admin already exists" });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const admin = await storage.createAdmin({ username, password: hashedPassword });
-      
-      // Set admin session
-      (req.session as any).adminId = admin.id;
-      (req.session as any).isAdminAuthenticated = true;
-      
-      res.json({ message: "Admin created successfully", admin: { id: admin.id, username: admin.username } });
-    } catch (error) {
-      console.error("Error creating admin:", error);
-      res.status(500).json({ message: "Failed to create admin" });
-    }
-  });
+  // Simple admin authentication system - Registration removed for security
 
   app.post('/api/admin/login', async (req, res) => {
     try {
@@ -245,6 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set admin session
       (req.session as any).adminId = admin.id;
+      (req.session as any).adminUsername = admin.username;
       (req.session as any).isAdminAuthenticated = true;
       
       res.json({ message: "Login successful", admin: { id: admin.id, username: admin.username } });
@@ -451,6 +425,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch app settings" });
     }
   });
+
+  // AdSense verification routes
+  app.get('/api/admin/adsense-verification', requireAdminSession, async (req, res) => {
+    try {
+      const verification = await storage.getAdSenseVerification();
+      res.json(verification);
+    } catch (error) {
+      console.error("Error fetching AdSense verification:", error);
+      res.status(500).json({ message: "Failed to fetch AdSense verification" });
+    }
+  });
+
+  app.post('/api/admin/adsense-verification', requireAdminSession, async (req, res) => {
+    try {
+      const verification = await storage.createAdSenseVerification(req.body);
+      res.json(verification);
+    } catch (error) {
+      console.error("Error creating AdSense verification:", error);
+      res.status(500).json({ message: "Failed to create AdSense verification" });
+    }
+  });
+
+  app.post('/api/admin/adsense-verification/verify', requireAdminSession, async (req, res) => {
+    try {
+      const { method, code } = req.body;
+      
+      // Get current verification
+      const verification = await storage.getAdSenseVerification();
+      if (!verification) {
+        return res.status(404).json({ message: "No verification found" });
+      }
+
+      // Simulate verification check (in production, this would check actual implementation)
+      // For now, we'll just mark it as verified
+      const verifiedVerification = await storage.verifyAdSenseVerification(verification.id);
+      
+      res.json(verifiedVerification);
+    } catch (error) {
+      console.error("Error verifying AdSense:", error);
+      res.status(500).json({ message: "Failed to verify AdSense" });
+    }
+  });
+
+  // Admin credential management routes
+  app.get('/api/admin/profile', requireAdminSession, async (req: any, res) => {
+    try {
+      const adminId = req.session.adminId;
+      const admin = await storage.getAdminById(adminId);
+      if (!admin) {
+        return res.status(404).json({ message: "Admin not found" });
+      }
+      res.json(admin);
+    } catch (error) {
+      console.error("Error fetching admin profile:", error);
+      res.status(500).json({ message: "Failed to fetch admin profile" });
+    }
+  });
+
+  app.put('/api/admin/credentials', requireAdminSession, async (req: any, res) => {
+    try {
+      const adminId = req.session.adminId;
+      const { username, password, email, currentPassword } = req.body;
+
+      // Verify current password
+      const admin = await storage.getAdminByUsername(req.session.adminUsername);
+      if (!admin || !bcrypt.compareSync(currentPassword, admin.password)) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      const updates: { username?: string; password?: string; email?: string } = {};
+      if (username) updates.username = username;
+      if (password) updates.password = password;
+      if (email !== undefined) updates.email = email;
+
+      const success = await storage.updateAdminCredentials(adminId, updates);
+      if (!success) {
+        return res.status(400).json({ message: "Failed to update credentials. Username or email may already exist." });
+      }
+
+      // Update session if username changed
+      if (username) {
+        req.session.adminUsername = username;
+      }
+
+      res.json({ message: "Credentials updated successfully" });
+    } catch (error) {
+      console.error("Error updating admin credentials:", error);
+      res.status(500).json({ message: "Failed to update credentials" });
+    }
+  });
+
+
 
   app.get('/api/app-settings/:key', async (req, res) => {
     try {

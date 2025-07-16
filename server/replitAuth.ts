@@ -26,32 +26,9 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
-  // In production without DATABASE_URL, use memory store temporarily
-  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-    return session({
-      secret: process.env.SESSION_SECRET || 'railway-fallback-secret',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        secure: false, // Railway doesn't have HTTPS in all environments
-        maxAge: sessionTtl,
-      },
-    });
-  }
-  
-  // Use PostgreSQL store when DATABASE_URL is available
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true, // Create table if missing
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
-  
+  // Use memory store temporarily due to database connection issues
   return session({
     secret: process.env.SESSION_SECRET || 'development-secret',
-    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -179,7 +156,18 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 };
 
-// Admin authentication middleware
+// Simple admin session middleware for credential management
+export const requireAdminSession: RequestHandler = async (req, res, next) => {
+  const session = req.session as any;
+  
+  if (!session.isAdminAuthenticated || !session.adminId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  return next();
+};
+
+// Admin authentication middleware for Replit OAuth admin users
 export const isAdmin: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 

@@ -158,20 +158,34 @@ export function InteractiveButton({
     position: 'relative',
     display: 'inline-block',
     borderRadius: `${borderRadius}px`,
-    background: borderGradient,
+    background: transparentBackground ? 'transparent' : borderGradient,
+    border: transparentBackground ? `${borderWidth}px ${borderStyle}` : 'none',
+    borderImage: transparentBackground ? borderGradient + ' 1' : 'none',
     cursor: 'pointer',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     boxShadow: getBoxShadow(),
     transform: getHoverTransform(),
     width: `${width}px`,
     height: `${height}px`,
-    padding: `${borderWidth}px`,
+    padding: transparentBackground ? `${paddingY}px ${paddingX}px` : `${borderWidth}px`,
     userSelect: 'none',
-    boxSizing: 'content-box',
+    boxSizing: transparentBackground ? 'border-box' : 'content-box',
   };
 
-  const innerStyle: React.CSSProperties = {
-    background: transparentBackground ? 'transparent' : getBackgroundStyle(),
+  const innerStyle: React.CSSProperties = transparentBackground ? {
+    background: 'transparent',
+    borderRadius: `${borderRadius}px`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    overflow: 'hidden',
+    position: 'relative',
+    boxSizing: 'border-box',
+  } : {
+    background: getBackgroundStyle(),
     borderRadius: `${Math.max(0, borderRadius - borderWidth)}px`,
     display: 'flex',
     alignItems: 'center',
@@ -223,44 +237,85 @@ export function InteractiveButton({
       onMouseUp={() => setIsPressed(false)}
       onClick={handleClick}
     >
-      <div style={innerStyle}>
-        {/* Slide overlay effect for modern styles */}
-        {isHovered && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: isHovered ? '0%' : '-100%',
-              width: '100%',
-              height: '100%',
-              background: 'rgba(255, 255, 255, 0.1)',
-              transition: 'left 0.3s ease',
-              zIndex: 1,
-            }}
-          />
-        )}
+      {transparentBackground ? (
+        <>
+          {/* Slide overlay effect for modern styles */}
+          {isHovered && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: isHovered ? '0%' : '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                transition: 'left 0.3s ease',
+                zIndex: 1,
+              }}
+            />
+          )}
 
-        {/* Ripple effect */}
-        {showRipple && (
-          <div
-            className="ripple-effect"
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.6)',
-              transform: 'translate(-50%, -50%) scale(0)',
-              zIndex: 2,
-              animation: `ripple-animation 0.6s ease-out`,
-            }}
-          />
-        )}
-        
-        <span style={textStyle}>{text}</span>
-      </div>
+          {/* Ripple effect */}
+          {showRipple && (
+            <div
+              className="ripple-effect"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.6)',
+                transform: 'translate(-50%, -50%) scale(0)',
+                zIndex: 2,
+                animation: `ripple-animation 0.6s ease-out`,
+              }}
+            />
+          )}
+          
+          <span style={textStyle}>{text}</span>
+        </>
+      ) : (
+        <div style={innerStyle}>
+          {/* Slide overlay effect for modern styles */}
+          {isHovered && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: isHovered ? '0%' : '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                transition: 'left 0.3s ease',
+                zIndex: 1,
+              }}
+            />
+          )}
+
+          {/* Ripple effect */}
+          {showRipple && (
+            <div
+              className="ripple-effect"
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.6)',
+                transform: 'translate(-50%, -50%) scale(0)',
+                zIndex: 2,
+                animation: `ripple-animation 0.6s ease-out`,
+              }}
+            />
+          )}
+          
+          <span style={textStyle}>{text}</span>
+        </div>
+      )}
     </div>
   );
 }

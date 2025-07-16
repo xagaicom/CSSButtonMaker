@@ -10,9 +10,11 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   // Admin operations
-  createAdmin(admin: { username: string; password: string }): Promise<{ id: string; username: string; createdAt: Date | null }>;
-  getAdminByUsername(username: string): Promise<{ id: string; username: string; password: string } | undefined>;
-  getAllAdmins(): Promise<{ id: string; username: string }[]>;
+  createAdmin(admin: { username: string; password: string; email?: string }): Promise<{ id: string; username: string; createdAt: Date | null }>;
+  getAdminByUsername(username: string): Promise<{ id: string; username: string; password: string; email?: string } | undefined>;
+  getAllAdmins(): Promise<{ id: string; username: string; email?: string }[]>;
+  updateAdminCredentials(id: string, updates: { username?: string; password?: string; email?: string }): Promise<boolean>;
+  getAdminById(id: string): Promise<{ id: string; username: string; email?: string } | undefined>;
   // Button design operations
   saveButtonDesign(design: InsertButtonDesign): Promise<ButtonDesign>;
   getUserButtonDesigns(userId: string): Promise<ButtonDesign[]>;
@@ -44,6 +46,13 @@ export interface IStorage {
   setAppSetting(setting: InsertAppSetting): Promise<AppSetting>;
   getAllAppSettings(): Promise<AppSetting[]>;
   deleteAppSetting(key: string): Promise<boolean>;
+  
+  // AdSense verification operations
+  createAdSenseVerification(verification: InsertAdSenseVerification): Promise<AdSenseVerification>;
+  getAdSenseVerification(): Promise<AdSenseVerification | undefined>;
+  updateAdSenseVerification(id: string, updates: Partial<InsertAdSenseVerification>): Promise<AdSenseVerification | undefined>;
+  verifyAdSenseVerification(id: string): Promise<AdSenseVerification | undefined>;
+  deleteAdSenseVerification(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -337,4 +346,7 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+import { MemStorage } from "./mem-storage";
+
+// Use in-memory storage temporarily due to database connection issues
+export const storage = new MemStorage();

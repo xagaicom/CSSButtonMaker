@@ -296,8 +296,9 @@ export function AdvancedButton({
       border-radius: ${borderRadius}px;
       
       background: ${backgroundGradient};
-      border: ${borderWidth}px ${borderStyle} transparent;
-      ${borderWidth > 0 ? `background-clip: padding-box; border-image: ${borderGradient} 1;` : ''}
+      border: ${borderWidth}px ${borderStyle} ${transparentBackground ? 'transparent' : borderGradient};
+      ${borderWidth > 0 && transparentBackground ? `border-image: ${borderGradient} 1;` : ''}
+      ${borderWidth > 0 && !transparentBackground ? `background-clip: padding-box; border-image: ${borderGradient} 1;` : ''}
       
       color: ${textStartColor === textEndColor ? textStartColor : 'transparent'};
       ${textStartColor !== textEndColor ? `background-image: ${textGradient}; -webkit-background-clip: text; background-clip: text;` : ''}

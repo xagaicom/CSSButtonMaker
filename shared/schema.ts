@@ -43,6 +43,10 @@ export const admins = pgTable("admins", {
   id: varchar("id").primaryKey().notNull(),
   username: varchar("username").unique().notNull(),
   password: varchar("password").notNull(),
+  email: varchar("email").unique(),
+  resetToken: varchar("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  lastPasswordChange: timestamp("last_password_change"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -193,3 +197,25 @@ export const insertAppSettingSchema = createInsertSchema(appSettings).omit({
 
 export type InsertAppSetting = z.infer<typeof insertAppSettingSchema>;
 export type AppSetting = typeof appSettings.$inferSelect;
+
+// AdSense Verification table
+export const adsenseVerifications = pgTable("adsense_verifications", {
+  id: varchar("id").primaryKey().notNull(),
+  method: varchar("method").notNull(), // "adsense_code" | "ads_txt" | "meta_tag"
+  code: text("code").notNull(),
+  publisherId: varchar("publisher_id"),
+  isActive: boolean("is_active").default(true),
+  verified: boolean("verified").default(false),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAdSenseVerificationSchema = createInsertSchema(adsenseVerifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAdSenseVerification = z.infer<typeof insertAdSenseVerificationSchema>;
+export type AdSenseVerification = typeof adsenseVerifications.$inferSelect;

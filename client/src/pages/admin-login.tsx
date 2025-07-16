@@ -12,7 +12,7 @@ export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
+
   const { toast } = useToast();
 
   const loginMutation = useMutation({
@@ -35,7 +35,8 @@ export default function AdminLogin() {
         title: "Success",
         description: "Logged in as admin successfully!",
       });
-      setLocation('/admin');
+      // Direct redirect to admin panel
+      window.location.href = '/admin-panel';
     },
     onError: (error: any) => {
       toast({
@@ -46,36 +47,7 @@ export default function AdminLogin() {
     },
   });
 
-  const registerMutation = useMutation({
-    mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      const response = await fetch('/api/admin/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Registration failed');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Admin account created successfully!",
-      });
-      setIsRegistering(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Registration failed",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,11 +60,7 @@ export default function AdminLogin() {
       return;
     }
 
-    if (isRegistering) {
-      registerMutation.mutate({ username, password });
-    } else {
-      loginMutation.mutate({ username, password });
-    }
+    loginMutation.mutate({ username, password });
   };
 
   return (
@@ -100,7 +68,7 @@ export default function AdminLogin() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
-            {isRegistering ? 'Create Admin Account' : 'Admin Login'}
+            Admin Login
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -130,21 +98,13 @@ export default function AdminLogin() {
             <Button 
               type="submit" 
               className="w-full"
-              disabled={loginMutation.isPending || registerMutation.isPending}
+              disabled={loginMutation.isPending}
             >
-              {isRegistering ? 'Create Account' : 'Login'}
+              {loginMutation.isPending ? 'Please wait...' : 'Login'}
             </Button>
           </form>
           
-          <div className="mt-4 text-center">
-            <Button
-              variant="link"
-              onClick={() => setIsRegistering(!isRegistering)}
-              className="text-sm"
-            >
-              {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
-            </Button>
-          </div>
+
 
           <div className="mt-4 text-center">
             <Button

@@ -8,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
-import { Trash2, Plus, Code, Eye, DollarSign } from "lucide-react";
+import { Trash2, Plus, Code, Eye, DollarSign, Globe, Settings, LogOut } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdManager } from "@/components/ad-manager";
+import { AdSenseVerificationManager } from "@/components/adsense-verification-manager";
+import { AdminCredentialsManager } from "@/components/admin-credentials-manager";
 
 
 interface CustomButton {
@@ -42,8 +44,11 @@ export default function AdminPanel() {
   useEffect(() => {
     if (adminStatus?.isAuthenticated) {
       setIsAuthenticated(true);
+    } else if (adminStatus && !adminStatus.isAuthenticated) {
+      // If we got a response but user is not authenticated, redirect to login
+      setLocation('/admin-login');
     }
-  }, [adminStatus]);
+  }, [adminStatus, setLocation]);
 
   // Fetch custom buttons
   const { data: customButtons = [], isLoading: buttonsLoading } = useQuery({
@@ -96,28 +101,29 @@ export default function AdminPanel() {
     },
   });
 
+  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/admin/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
-      return response.json();
+      const response = await apiRequest('POST', '/api/admin/logout');
+      return await response.json();
     },
     onSuccess: () => {
-      setIsAuthenticated(false);
       toast({
-        title: "Logged out",
-        description: "You have been logged out successfully",
+        title: "Success",
+        description: "Logged out successfully!",
       });
       setLocation('/admin-login');
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
+      });
+    },
   });
+
+
 
   const handleAddButton = () => {
     if (!newButton.buttonText || !newButton.cssCode) {
@@ -161,18 +167,11 @@ export default function AdminPanel() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p>You need to be logged in as an admin to access this panel.</p>
-            <Button onClick={() => setLocation('/admin-login')}>
-              Go to Admin Login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Redirecting to login...</p>
+        </div>
       </div>
     );
   }
@@ -185,13 +184,23 @@ export default function AdminPanel() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Panel</h1>
             <p className="text-gray-600">Manage custom CSS buttons for the CSS Button Maker</p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            {logoutMutation.isPending ? "Logging out..." : "Logout"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation('/')}
+            >
+              Back to App
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              {logoutMutation.isPending ? "Logging out..." : "Logout"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -377,6 +386,24 @@ export default function AdminPanel() {
             Google AdSense Management
           </h2>
           <AdManager />
+        </div>
+
+        {/* AdSense Verification Tab */}
+        <div className="mt-8 bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Globe className="w-6 h-6" />
+            AdSense Website Verification
+          </h2>
+          <AdSenseVerificationManager />
+        </div>
+
+        {/* Admin Credentials Management */}
+        <div className="mt-8 bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Settings className="w-6 h-6" />
+            Admin Credentials
+          </h2>
+          <AdminCredentialsManager />
         </div>
 
         {/* App Settings Management */}

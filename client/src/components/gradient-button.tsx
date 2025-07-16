@@ -96,18 +96,29 @@ export function GradientButton({
     position: 'relative',
     display: 'inline-block',
     borderRadius: `${borderRadius}px`,
-    background: borderGradient,
+    background: transparentBackground ? 'transparent' : borderGradient,
+    border: transparentBackground ? `${borderWidth}px ${borderStyle}` : 'none',
+    borderImage: transparentBackground ? borderGradient + ' 1' : 'none',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     boxShadow: boxShadowValue,
     transform: enable3D ? 'perspective(1000px) rotateX(5deg)' : 'none',
     width: `${width}px`,
     height: `${height}px`,
-    padding: `${borderWidth}px`,
-    boxSizing: 'content-box',
+    padding: transparentBackground ? `${paddingY}px ${paddingX}px` : `${borderWidth}px`,
+    boxSizing: transparentBackground ? 'border-box' : 'content-box',
   };
 
-  const innerStyle: React.CSSProperties = {
+  const innerStyle: React.CSSProperties = transparentBackground ? {
+    background: 'transparent',
+    borderRadius: `${borderRadius}px`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+    boxSizing: 'border-box',
+  } : {
     background: backgroundGradient,
     borderRadius: `${Math.max(0, borderRadius - borderWidth)}px`,
     display: 'flex',
@@ -142,11 +153,17 @@ export function GradientButton({
       className={cn("gradient-button", className)}
       style={containerStyle}
     >
-      <div className="button-inner" style={innerStyle}>
+      {transparentBackground ? (
         <span className="button-text" style={textStyle}>
           {text}
         </span>
-      </div>
+      ) : (
+        <div className="button-inner" style={innerStyle}>
+          <span className="button-text" style={textStyle}>
+            {text}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
