@@ -21,7 +21,13 @@ export function AdSenseMetaTags() {
     const existingMetaTags = document.querySelectorAll('meta[name="google-adsense-account"], meta[name="google-site-verification"]');
     existingMetaTags.forEach(tag => tag.remove());
 
-    // Add new meta tag if verification exists and is active
+    // Always add the AdSense account meta tag (hardcoded for reliability)
+    const adsenseMetaTag = document.createElement('meta');
+    adsenseMetaTag.setAttribute('name', 'google-adsense-account');
+    adsenseMetaTag.setAttribute('content', 'ca-pub-5184021631989355');
+    document.head.appendChild(adsenseMetaTag);
+
+    // Also add dynamic verification if it exists and is active
     if (verification && verification.isActive && verification.method === 'meta_tag' && verification.code) {
       const metaTag = document.createElement('meta');
       
