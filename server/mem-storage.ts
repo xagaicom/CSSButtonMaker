@@ -53,6 +53,19 @@ export class MemStorage implements IStorage {
     // Initialize with default admin (Username: "Admin", Password: "123")
     this.createAdmin({ username: "Admin", password: "123" });
     
+    // Initialize with AdSense verification
+    this.adsenseVerifications = [
+      {
+        id: "adsense-1",
+        method: "meta_tag",
+        code: "ca-pub-5184021631989355",
+        isActive: true,
+        verified: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+    
     // Add some sample custom buttons
     this.customButtons = [
       {
