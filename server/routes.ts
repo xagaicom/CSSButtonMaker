@@ -415,6 +415,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint for AdSense verification meta tags (no auth required)
+  app.get('/api/adsense-verification', async (req, res) => {
+    try {
+      console.log("Public AdSense verification endpoint called");
+      const verification = await storage.getAdSenseVerification();
+      console.log("Verification data:", verification);
+      
+      // Only return active meta tag verifications for public use
+      if (verification && verification.isActive && verification.method === 'meta_tag') {
+        const response = {
+          code: verification.code,
+          method: verification.method,
+          isActive: verification.isActive
+        };
+        console.log("Returning verification response:", response);
+        res.json(response);
+      } else {
+        console.log("No active meta tag verification found, returning null");
+        res.json(null);
+      }
+    } catch (error) {
+      console.error("Error fetching public AdSense verification:", error);
+      res.status(500).json({ message: "Failed to fetch AdSense verification" });
+    }
+  });
+
   // App settings routes
   app.get('/api/app-settings', async (req, res) => {
     try {

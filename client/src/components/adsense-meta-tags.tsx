@@ -2,20 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 interface AdSenseVerification {
-  id: string;
-  method: "adsense_code" | "ads_txt" | "meta_tag";
   code: string;
+  method: "adsense_code" | "ads_txt" | "meta_tag";
   isActive: boolean;
-  verified: boolean;
-  publisherId?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export function AdSenseMetaTags() {
-  // Fetch current verification settings
-  const { data: verification } = useQuery<AdSenseVerification>({
-    queryKey: ['/api/admin/adsense-verification'],
+  // Fetch current verification settings from public endpoint
+  const { data: verification } = useQuery<AdSenseVerification | null>({
+    queryKey: ['/api/adsense-verification'],
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
